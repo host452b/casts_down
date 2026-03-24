@@ -26,7 +26,7 @@ class RSSParser:
         try:
             feed = feedparser.parse(rss_url)
 
-            if feed.bozo:  # 解析错误
+            if feed.bozo and not feed.entries:  # 解析错误且无有效条目
                 raise ValueError(f"RSS 解析失败: {feed.bozo_exception}")
 
             podcast_name = feed.feed.get('title', 'Unknown Podcast')

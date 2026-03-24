@@ -199,16 +199,15 @@ class _CastsDownGroup(click.Group):
     """
 
     def parse_args(self, ctx, args):
-        # Find the first non-option token
-        for token in args:
-            if not token.startswith('-'):
-                if token in self.commands:
-                    # It is a subcommand; temporarily drop the URL param
-                    # so Click does not consume the subcommand name as URL.
-                    ctx.params.setdefault('url', None)
-                    self.params = [p for p in self.params
-                                   if not (hasattr(p, 'name') and p.name == 'url')]
-                break
+        # Check if first arg looks like a subcommand
+        if args and args[0] in self.commands:
+            # Temporarily remove the 'url' argument so Click routes to subcommand
+            saved_params = self.params
+            self.params = [p for p in self.params if p.name != 'url']
+            try:
+                return super().parse_args(ctx, args)
+            finally:
+                self.params = saved_params
         return super().parse_args(ctx, args)
 
 
