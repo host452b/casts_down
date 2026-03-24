@@ -53,7 +53,7 @@ class TestDetectEngine:
             mock_platform.system.return_value = "Linux"
             mock_platform.machine.return_value = "x86_64"
             mock_fw = MagicMock()
-            with patch.dict("sys.modules", {"faster_whisper": mock_fw}):
+            with patch.dict("sys.modules", {"faster_whisper": mock_fw, "mlx_whisper": None}):
                 import casts_down.transcribe as t
                 importlib.reload(t)
                 engine = t.detect_engine(model="small")

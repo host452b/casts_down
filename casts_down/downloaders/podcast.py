@@ -1,7 +1,6 @@
 """RSS and Apple Podcasts parsers."""
 
 import re
-from typing import Optional
 
 import aiohttp
 import feedparser
@@ -14,7 +13,7 @@ class RSSParser:
     """RSS 解析器"""
 
     @staticmethod
-    def parse(rss_url: str, episode_title: Optional[str] = None) -> tuple[str, list[PodcastEpisode]]:
+    def parse(rss_url: str, episode_title: str | None = None) -> tuple[str, list[PodcastEpisode]]:
         """
         解析 RSS 源
         返回: (播客名称, 剧集列表)
@@ -85,7 +84,7 @@ class ApplePodcastsParser:
     """Apple Podcasts URL 处理器"""
 
     @staticmethod
-    def extract_episode_id(apple_url: str) -> Optional[str]:
+    def extract_episode_id(apple_url: str) -> str | None:
         """
         从 Apple Podcasts URL 提取单集 ID
         例如: ?i=1000747967318 -> 1000747967318
@@ -94,7 +93,7 @@ class ApplePodcastsParser:
         return match.group(1) if match else None
 
     @staticmethod
-    async def extract_metadata_async(session: aiohttp.ClientSession, apple_url: str) -> tuple[Optional[str], Optional[str]]:
+    async def extract_metadata_async(session: aiohttp.ClientSession, apple_url: str) -> tuple[str | None, str | None]:
         """
         异步一次性从 Apple Podcasts 页面提取 RSS URL 和标题
         返回: (rss_url, episode_title)

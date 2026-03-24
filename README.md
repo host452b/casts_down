@@ -82,17 +82,17 @@ casts-down <URL> [OPTIONS]
 ### Transcribe
 
 ```bash
-casts-down transcribe <PATH> [OPTIONS]
+casts-down transcribe <FILE>... [OPTIONS]
 ```
 
-Transcribe a single audio file or all audio files in a directory. Outputs `.srt` (subtitle) and `.txt` (timestamped text) alongside each audio file.
+Transcribe audio files or directories. Outputs `.srt` (subtitle) and `.txt` (timestamped text) alongside each audio file.
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--model NAME` | Whisper model (`tiny`, `base`, `small`, `medium`, `large-v3`) | `small` |
-| `--language CODE` | Language code (`zh`, `en`, etc.) | auto-detect |
-| `--skip-transcribed` | Skip files already transcribed | on |
-| `--overwrite` | Force re-transcribe | off |
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--model NAME` | `-m` | Whisper model (`tiny`, `base`, `small`, `medium`, `large-v3`) | `small` |
+| `--language CODE` | | Language code (`zh`, `en`, etc.) | auto-detect |
+| `--skip-transcribed` | | Skip files already transcribed | on |
+| `--overwrite` | | Force re-transcribe existing outputs | off |
 
 ### Setup
 

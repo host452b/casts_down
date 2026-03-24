@@ -1,5 +1,4 @@
 """Tests for transcription output formatting."""
-from pathlib import Path
 from casts_down.transcribe.engine import Segment
 from casts_down.transcribe.formatter import format_srt, format_txt, write_outputs
 
