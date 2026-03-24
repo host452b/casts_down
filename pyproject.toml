@@ -5,14 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "casts_down"
 version = "2.0.0"
-description = "一个强大的跨平台命令行播客下载工具，支持多个播客平台和 RSS 源"
+description = "Cross-platform CLI for downloading and transcribing podcasts with local Whisper speech-to-text"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Casts Down Contributors"}
 ]
-keywords = ["podcast", "downloader", "cli", "apple-podcasts", "xiaoyuzhou", "rss"]
+keywords = [
+    "podcast", "downloader", "cli", "transcribe", "speech-to-text",
+    "whisper", "srt", "subtitle", "apple-podcasts", "xiaoyuzhou", "rss",
+    "faster-whisper", "mlx-whisper", "audio", "asr",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -21,7 +25,9 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Environment :: Console",
 ]
 
