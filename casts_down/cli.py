@@ -205,7 +205,11 @@ class _CastsDownGroup(click.Group):
             saved_params = self.params
             self.params = [p for p in self.params if p.name != 'url']
             try:
-                return super().parse_args(ctx, args)
+                result = super().parse_args(ctx, args)
+                # Ensure 'url' has a default value in ctx.params so the group
+                # callback can be called without a TypeError on the 'url' arg.
+                ctx.params.setdefault('url', None)
+                return result
             finally:
                 self.params = saved_params
         return super().parse_args(ctx, args)
