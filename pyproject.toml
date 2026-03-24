@@ -4,26 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "casts_down"
-version = "1.0.2"
-description = "一个强大的跨平台命令行播客下载工具，支持多个播客平台和 RSS 源"
+version = "2.0.0"
+description = "Cross-platform CLI for downloading and transcribing podcasts with local Whisper speech-to-text"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Casts Down Contributors"}
 ]
-keywords = ["podcast", "downloader", "cli", "apple-podcasts", "xiaoyuzhou", "rss"]
+keywords = [
+    "podcast", "downloader", "cli", "transcribe", "speech-to-text",
+    "whisper", "srt", "subtitle", "apple-podcasts", "xiaoyuzhou", "rss",
+    "faster-whisper", "mlx-whisper", "audio", "asr",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Environment :: Console",
 ]
 
@@ -32,9 +36,13 @@ dependencies = [
     "beautifulsoup4>=4.11.0",
     "click>=8.1.0",
     "feedparser>=6.0.10",
-    "requests>=2.28.0",
     "tqdm>=4.65.0",
 ]
+
+[project.optional-dependencies]
+transcribe = ["faster-whisper>=1.0.0,<2.0.0"]
+transcribe-metal = ["mlx-whisper>=0.4.0,<1.0.0", "faster-whisper>=1.0.0,<2.0.0"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
 
 [project.urls]
 Homepage = "https://github.com/clemente0731/casts_down"
@@ -42,7 +50,7 @@ Repository = "https://github.com/clemente0731/casts_down"
 Issues = "https://github.com/clemente0731/casts_down/issues"
 
 [project.scripts]
-casts-down = "casts_down:main"
+casts-down = "casts_down.cli:main"
 
-[tool.setuptools]
-py-modules = ["casts_down", "podcast_dl", "xiaoyuzhou_dl"]
+[tool.setuptools.packages.find]
+include = ["casts_down*"]

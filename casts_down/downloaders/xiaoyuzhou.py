@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-"""
-小宇宙播客下载器
-支持单集和批量下载（前15集）
-"""
+"""Xiaoyuzhou (小宇宙) podcast downloader."""
 
 import asyncio
 import json
@@ -54,7 +50,8 @@ class XiaoyuzhouDownloader:
 
     async def get_episode_info(self, session: aiohttp.ClientSession, episode_url: str) -> dict:
         """获取单集信息"""
-        async with session.get(episode_url, headers=self.headers) as response:
+        async with session.get(episode_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            response.raise_for_status()
             html = await response.text()
             page_props = self.extract_episode_data(html)
 
@@ -76,7 +73,8 @@ class XiaoyuzhouDownloader:
         获取播客的剧集列表
         注意：目前只能获取前15集，完整列表需要额外逆向
         """
-        async with session.get(podcast_url, headers=self.headers) as response:
+        async with session.get(podcast_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            response.raise_for_status()
             html = await response.text()
 
             # 提取 buildId
@@ -92,7 +90,8 @@ class XiaoyuzhouDownloader:
             # 请求 Next.js 数据端点
             data_url = f"https://www.xiaoyuzhoufm.com/_next/data/{build_id}/podcast/{podcast_id}.json"
 
-            async with session.get(data_url, headers=self.headers) as data_response:
+            async with session.get(data_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as data_response:
+                data_response.raise_for_status()
                 data = await data_response.json()
 
                 podcast = data['pageProps']['podcast']
@@ -160,8 +159,14 @@ class XiaoyuzhouDownloader:
                     except Exception:
                         pass
 
-    async def download_episode_by_url(self, episode_url: str, output_dir: Path, skip_existing: bool = False):
-        """下载单个剧集（通过 URL）"""
+    async def download_episode_by_url(
+        self,
+        episode_url: str,
+        output_dir: Path,
+        skip_existing: bool = False
+    ) -> list[Path]:
+        """下载单个剧集（通过 URL），返回已下载文件路径列表"""
+        downloaded_files: list[Path] = []
         async with aiohttp.ClientSession() as session:
             click.echo(f"[*] Fetching episode info...")
 
@@ -189,18 +194,22 @@ class XiaoyuzhouDownloader:
 
             if success:
                 click.echo(f"[+] {message}")
+                downloaded_files.append(output_path)
             else:
                 click.echo(f"[-] {message}", err=True)
                 sys.exit(1)
+
+        return downloaded_files
 
     async def download_podcast(
         self,
         podcast_url: str,
         output_dir: Path,
         skip_existing: bool = False,
-        latest: int = None
-    ):
-        """批量下载播客剧集"""
+        latest: int | None = None
+    ) -> list[Path]:
+        """批量下载播客剧集，返回已下载文件路径列表"""
+        downloaded_files: list[Path] = []
         async with aiohttp.ClientSession() as session:
             click.echo(f"[*] Fetching podcast info...")
 
@@ -220,10 +229,13 @@ class XiaoyuzhouDownloader:
 
             # 批量下载
             tasks = []
-            for episode in episodes:
+            path_map: dict[int, Path] = {}
+            for i, episode in enumerate(episodes):
                 safe_title = re.sub(r'[<>:"/\\|?*]', '', episode['title'])
-                filename = f"{podcast_name} - {safe_title}.m4a"
+                safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name)
+                filename = f"{safe_podcast} - {safe_title}.m4a"
                 output_path = output_dir / filename
+                path_map[i] = output_path
 
                 task = self.download_audio(
                     session,
@@ -231,131 +243,27 @@ class XiaoyuzhouDownloader:
                     output_path,
                     skip_existing
                 )
-                tasks.append(task)
+                tasks.append((i, task))
 
             # 显示进度
             results = []
             with tqdm(total=len(tasks), desc="Download Progress", unit="ep") as pbar:
-                for coro in asyncio.as_completed(tasks):
-                    result = await coro
-                    results.append(result)
+                coros = {asyncio.ensure_future(t): idx for idx, t in tasks}
+                for future in asyncio.as_completed(list(coros.keys())):
+                    result = await future
+                    idx = coros[future]
+                    results.append((idx, result))
                     pbar.update(1)
 
                     success, message = result
                     if success:
                         tqdm.write(f"[+] {message}")
+                        downloaded_files.append(path_map[idx])
                     else:
                         tqdm.write(f"[-] {message}")
 
             # 统计
-            success_count = sum(1 for s, _ in results if s)
+            success_count = sum(1 for _, (s, _) in results if s)
             click.echo(f"\nDownload complete: {success_count}/{len(results)} succeeded")
 
-
-def print_banner():
-    """打印 ASCII 横幅"""
-    banner = r"""
-__  __(_) __ _  ___  _   _ _   _ ______ __   _  ___  _   _
-\ \/ /| |/ _` |/ _ \| | | | | | |_  / _` \ | | |/ _ \| | | |
- \  / | | (_| | (_) | |_| | |_| |/ / (_| |\ \_/ / (_) | |_| |
- /\_\ |_|\__,_|\___/ \__, |\__,_/___\__, | \___/ \___/ \__,_|
-                     |___/           __/ |
-                                    |___/
-                Xiaoyuzhou Podcast Downloader
-"""
-    click.echo(banner)
-
-
-def print_disclaimer():
-    """打印免责声明"""
-    disclaimer = """
-+================================================================+
-|                      [!] DISCLAIMER                            |
-+================================================================+
-|                                                                |
-| This project is for EDUCATIONAL purposes ONLY.                 |
-| Any destructive or commercial infringement is PROHIBITED.      |
-|                                                                |
-| 该项目仅用于学习端到端项目开发使用                                  |
-| 严禁用于任何破坏或者商业侵害活动                                    |
-|                                                                |
-| By using this tool, you agree to:                              |
-| - Use for personal learning and research only                  |
-| - Comply with laws and platform terms of service               |
-| - Respect content creators' copyrights                         |
-|                                                                |
-+================================================================+
-"""
-    click.echo(disclaimer)
-
-
-@click.command()
-@click.argument('url')
-@click.option('--output', '-o', type=click.Path(), default='./xiaoyuzhou_downloads', help='输出目录')
-@click.option('--concurrent', '-c', type=int, default=3, help='并发下载数')
-@click.option('--skip-existing', '-s', is_flag=True, help='跳过已存在的文件')
-@click.option('--latest', '-l', type=int, help='仅下载最新 N 集（仅播客链接）')
-def main(url: str, output: str, concurrent: int, skip_existing: bool, latest: int):
-    """
-    小宇宙播客下载器
-
-    \b
-    支持两种链接：
-    1. 单集链接：https://www.xiaoyuzhoufm.com/episode/{eid}
-    2. 播客链接：https://www.xiaoyuzhoufm.com/podcast/{pid}
-
-    \b
-    示例：
-    # 下载单集
-    xiaoyuzhou-dl "https://www.xiaoyuzhoufm.com/episode/6850d2ed4abe6e29cb814160"
-
-    \b
-    # 下载播客的所有可获取剧集（前15集）
-    xiaoyuzhou-dl "https://www.xiaoyuzhoufm.com/podcast/6388760f22567e8ea6ad070f"
-
-    \b
-    # 仅下载最新3集
-    xiaoyuzhou-dl "https://www.xiaoyuzhoufm.com/podcast/6388760f22567e8ea6ad070f" --latest 3
-
-    \b
-    [!] Limitations:
-    Due to Xiaoyuzhou technical limitations, podcast links can only fetch first 15 episodes.
-    To download full podcast, consider:
-    1. Run multiple times to get more episodes (if platform supports pagination)
-    2. Wait for complete list API reverse engineering
-    3. Use episode links to download one by one
-    """
-    try:
-        # 打印横幅和免责声明（已移至 casts_down.py 统一入口）
-        # print_banner()
-        # print_disclaimer()
-        downloader = XiaoyuzhouDownloader(concurrent=concurrent)
-        output_dir = Path(output)
-
-        # 判断链接类型
-        if '/episode/' in url:
-            # 单集下载
-            asyncio.run(downloader.download_episode_by_url(url, output_dir, skip_existing))
-        elif '/podcast/' in url:
-            # 播客批量下载
-            asyncio.run(downloader.download_podcast(url, output_dir, skip_existing, latest))
-        else:
-            click.echo("[!] Unrecognized URL format", err=True)
-            click.echo("Supported formats:", err=True)
-            click.echo("  - https://www.xiaoyuzhoufm.com/episode/{eid}", err=True)
-            click.echo("  - https://www.xiaoyuzhoufm.com/podcast/{pid}", err=True)
-            sys.exit(1)
-
-    except ValueError as e:
-        click.echo(f"[!] Error: {str(e)}", err=True)
-        sys.exit(1)
-    except KeyboardInterrupt:
-        click.echo("\n\n[!] Download interrupted by user", err=True)
-        sys.exit(130)
-    except Exception as e:
-        click.echo(f"[!] Unexpected error: {str(e)}", err=True)
-        sys.exit(1)
-
-
-if __name__ == '__main__':
-    main()
+        return downloaded_files
