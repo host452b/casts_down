@@ -61,4 +61,4 @@ class TestSetupTranscribe:
     def test_setup_runs_without_error(self, runner):
         result = runner.invoke(main, ["setup-transcribe"])
         assert result.exit_code == 0
-        assert "Transcription setup" in result.output
+        assert "Detecting environment" in result.output

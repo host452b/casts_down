@@ -122,7 +122,7 @@ class PodcastDownloader:
 
             # 使用 tqdm 显示进度
             results = []
-            with tqdm(total=len(tasks), desc="下载进度", unit="集") as pbar:
+            with tqdm(total=len(tasks), desc="Download Progress", unit="ep") as pbar:
                 coros = {asyncio.ensure_future(t): idx for idx, t in tasks}
                 for future in asyncio.as_completed(list(coros.keys())):
                     result = await future

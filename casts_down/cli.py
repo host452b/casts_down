@@ -179,10 +179,36 @@ def _download_xiaoyuzhou(
 # Transcription placeholder
 # ---------------------------------------------------------------------------
 
-def _run_transcription(files: list[Path], model: str) -> None:
-    """Placeholder for transcription (will be implemented in later tasks)."""
-    click.echo(f"\n[*] Transcription requested for {len(files)} file(s) with model '{model}'")
-    click.echo("[!] Transcription engine not yet installed. Run: casts-down setup-transcribe")
+def _run_transcription(files: list[Path], model: str, language: str | None = None,
+                       skip_transcribed: bool = True, overwrite: bool = False) -> None:
+    """Run transcription on a list of audio files."""
+    try:
+        from casts_down.transcribe import transcribe_batch, print_report, collect_audio_files
+
+        # Expand directories to audio files
+        expanded: list[Path] = []
+        for f in files:
+            if f.is_dir():
+                expanded.extend(collect_audio_files(f))
+            else:
+                expanded.append(f)
+
+        if not expanded:
+            click.echo("[!] No audio files found")
+            return
+
+        click.echo(f"\n[*] Transcribing {len(expanded)} file(s) with model '{model}'\n")
+        results = transcribe_batch(
+            expanded, model=model, language=language,
+            skip_transcribed=skip_transcribed, overwrite=overwrite,
+        )
+        print_report(results)
+    except RuntimeError as e:
+        click.echo(f"[!] {e}", err=True)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        click.echo("\n[!] Transcription interrupted by user")
+        sys.exit(130)
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +249,7 @@ class _CastsDownGroup(click.Group):
 @click.option('--concurrent', '-c', type=int, default=3, help='Concurrent downloads (default: 3)')
 @click.option('--skip-existing', '-s', is_flag=True, help='Skip existing files')
 @click.option('--transcribe', '-t', is_flag=True, help='Transcribe after downloading')
-@click.option('--model', '-m', type=str, default='base', help='Whisper model for transcription (default: base)')
+@click.option('--model', '-m', type=str, default='small', help='Whisper model for transcription (default: small)')
 @click.option('--version', is_flag=True, help='Show version')
 @click.pass_context
 def main(ctx, url, download_all, latest, output, concurrent, skip_existing, transcribe, model, version):
@@ -335,23 +361,27 @@ def main(ctx, url, download_all, latest, output, concurrent, skip_existing, tran
 
 @main.command()
 @click.argument('files', nargs=-1, type=click.Path(exists=True))
-@click.option('--model', '-m', type=str, default='base', help='Whisper model (default: base)')
-@click.option('--output', '-o', type=click.Path(), default=None, help='Output directory for transcripts')
-def transcribe(files, model, output):
+@click.option('--model', '-m', type=str, default='small', help='Whisper model (default: small)')
+@click.option('--language', type=str, default=None, help='Language code (zh, en, etc.)')
+@click.option('--skip-transcribed', is_flag=True, default=True, help='Skip already transcribed files')
+@click.option('--overwrite', is_flag=True, help='Force re-transcribe existing outputs')
+def transcribe(files, model, language, skip_transcribed, overwrite):
     """Transcribe local audio files.
 
     \b
     Examples:
       casts-down transcribe recording.mp3
-      casts-down transcribe *.mp3 --model large-v3
-      casts-down transcribe podcast.m4a -o ./transcripts
+      casts-down transcribe *.mp3 --model medium
+      casts-down transcribe ./podcasts/ --language zh
     """
     if not files:
         click.echo("[!] No files specified. Usage: casts-down transcribe <file> [file ...]", err=True)
         sys.exit(1)
 
     file_paths = [Path(f) for f in files]
-    _run_transcription(file_paths, model)
+    _run_transcription(file_paths, model, language=language,
+                       skip_transcribed=not overwrite and skip_transcribed,
+                       overwrite=overwrite)
 
 
 @main.command('setup-transcribe')
@@ -370,6 +400,5 @@ def setup_transcribe(backend):
       casts-down setup-transcribe
       casts-down setup-transcribe --backend faster-whisper
     """
-    click.echo("[*] Transcription setup")
-    click.echo(f"[*] Backend: {backend}")
-    click.echo("[!] Setup not yet implemented. Coming soon.")
+    from casts_down.transcribe.installer import run_setup
+    run_setup()

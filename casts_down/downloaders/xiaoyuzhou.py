@@ -50,7 +50,7 @@ class XiaoyuzhouDownloader:
 
     async def get_episode_info(self, session: aiohttp.ClientSession, episode_url: str) -> dict:
         """获取单集信息"""
-        async with session.get(episode_url, headers=self.headers) as response:
+        async with session.get(episode_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
             response.raise_for_status()
             html = await response.text()
             page_props = self.extract_episode_data(html)
@@ -73,7 +73,7 @@ class XiaoyuzhouDownloader:
         获取播客的剧集列表
         注意：目前只能获取前15集，完整列表需要额外逆向
         """
-        async with session.get(podcast_url, headers=self.headers) as response:
+        async with session.get(podcast_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
             response.raise_for_status()
             html = await response.text()
 
@@ -90,7 +90,7 @@ class XiaoyuzhouDownloader:
             # 请求 Next.js 数据端点
             data_url = f"https://www.xiaoyuzhoufm.com/_next/data/{build_id}/podcast/{podcast_id}.json"
 
-            async with session.get(data_url, headers=self.headers) as data_response:
+            async with session.get(data_url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=30)) as data_response:
                 data_response.raise_for_status()
                 data = await data_response.json()
 
@@ -232,7 +232,8 @@ class XiaoyuzhouDownloader:
             path_map: dict[int, Path] = {}
             for i, episode in enumerate(episodes):
                 safe_title = re.sub(r'[<>:"/\\|?*]', '', episode['title'])
-                filename = f"{podcast_name} - {safe_title}.m4a"
+                safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name)
+                filename = f"{safe_podcast} - {safe_title}.m4a"
                 output_path = output_dir / filename
                 path_map[i] = output_path
 
