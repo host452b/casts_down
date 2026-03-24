@@ -51,6 +51,7 @@ class XiaoyuzhouDownloader:
     async def get_episode_info(self, session: aiohttp.ClientSession, episode_url: str) -> dict:
         """获取单集信息"""
         async with session.get(episode_url, headers=self.headers) as response:
+            response.raise_for_status()
             html = await response.text()
             page_props = self.extract_episode_data(html)
 
@@ -73,6 +74,7 @@ class XiaoyuzhouDownloader:
         注意：目前只能获取前15集，完整列表需要额外逆向
         """
         async with session.get(podcast_url, headers=self.headers) as response:
+            response.raise_for_status()
             html = await response.text()
 
             # 提取 buildId
@@ -89,6 +91,7 @@ class XiaoyuzhouDownloader:
             data_url = f"https://www.xiaoyuzhoufm.com/_next/data/{build_id}/podcast/{podcast_id}.json"
 
             async with session.get(data_url, headers=self.headers) as data_response:
+                data_response.raise_for_status()
                 data = await data_response.json()
 
                 podcast = data['pageProps']['podcast']
@@ -203,7 +206,7 @@ class XiaoyuzhouDownloader:
         podcast_url: str,
         output_dir: Path,
         skip_existing: bool = False,
-        latest: int = None
+        latest: int | None = None
     ) -> list[Path]:
         """批量下载播客剧集，返回已下载文件路径列表"""
         downloaded_files: list[Path] = []
