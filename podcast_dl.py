@@ -180,82 +180,6 @@ class ApplePodcastsParser:
         except Exception as e:
             return None, None
 
-    @staticmethod
-    def extract_episode_title(apple_url: str) -> Optional[str]:
-        """
-        从 Apple Podcasts 单集页面提取剧集标题
-
-        已弃用：请使用 extract_metadata_async() 以获得更好的性能
-        """
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-            }
-            response = requests.get(apple_url, headers=headers, timeout=10)
-            response.raise_for_status()
-
-            # 确保正确的编码
-            response.encoding = response.apparent_encoding or 'utf-8'
-
-            soup = BeautifulSoup(response.content, 'html.parser')
-
-            # 方式1: 查找 og:title
-            title_meta = soup.find('meta', {'property': 'og:title'})
-            if title_meta and title_meta.get('content'):
-                return title_meta['content']
-
-            # 方式2: 查找页面标题
-            title_tag = soup.find('title')
-            if title_tag:
-                return title_tag.text.strip()
-
-            return None
-
-        except Exception:
-            return None
-
-    @staticmethod
-    def extract_rss_url(apple_url: str) -> str:
-        """
-        从 Apple Podcasts 页面提取 RSS URL
-        """
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-            }
-            response = requests.get(apple_url, headers=headers, timeout=10)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # 方式1: 查找 feed URL meta 标签
-            feed_meta = soup.find('meta', {'property': 'og:audio'})
-            if feed_meta and feed_meta.get('content'):
-                return feed_meta['content']
-
-            # 方式2: 查找页面中的 RSS 链接
-            rss_link = soup.find('a', href=re.compile(r'https?://.*\.rss'))
-            if rss_link:
-                return rss_link['href']
-
-            # 方式3: 使用 iTunes API
-            podcast_id = re.search(r'/id(\d+)', apple_url)
-            if podcast_id:
-                api_url = f"https://itunes.apple.com/lookup?id={podcast_id.group(1)}&entity=podcast"
-                api_response = requests.get(api_url, timeout=10)
-                data = api_response.json()
-
-                if data['resultCount'] > 0:
-                    feed_url = data['results'][0].get('feedUrl')
-                    if feed_url:
-                        return feed_url
-
-            raise ValueError("无法从 Apple Podcasts 页面提取 RSS URL")
-
-        except requests.RequestException as e:
-            raise ValueError(f"请求 Apple Podcasts 失败: {str(e)}")
-
-
 class PodcastDownloader:
     """异步下载器"""
 
@@ -360,43 +284,6 @@ class PodcastDownloader:
             click.echo(f"\nDownload complete: {success_count}/{len(results)} succeeded")
 
 
-def print_banner():
-    """打印 ASCII 横幅"""
-    banner = r"""
-   ____          _         ____
-  / ___|__ _ ___| |_ ___  |  _ \  _____      ___ __
- | |   / _` / __| __/ __| | | | |/ _ \ \ /\ / / '_ \
- | |__| (_| \__ \ |_\__ \ | |_| | (_) \ V  V /| | | |
-  \____\__,_|___/\__|___/ |____/ \___/ \_/\_/ |_| |_|
-
-          Podcast Downloader (Apple Podcasts/RSS)
-"""
-    click.echo(banner)
-
-
-def print_disclaimer():
-    """打印免责声明"""
-    disclaimer = """
-+================================================================+
-|                      [!] DISCLAIMER                            |
-+================================================================+
-|                                                                |
-| This project is for EDUCATIONAL purposes ONLY.                 |
-| Any destructive or commercial infringement is PROHIBITED.      |
-|                                                                |
-| 该项目仅用于学习端到端项目开发使用                                  |
-| 严禁用于任何破坏或者商业侵害活动                                    |
-|                                                                |
-| By using this tool, you agree to:                              |
-| - Use for personal learning and research only                  |
-| - Comply with laws and platform terms of service               |
-| - Respect content creators' copyrights                         |
-|                                                                |
-+================================================================+
-"""
-    click.echo(disclaimer)
-
-
 @click.command()
 @click.argument('url')
 @click.option('--all', '-a', is_flag=True, help='下载所有剧集')
@@ -427,10 +314,6 @@ def main(url: str, all: bool, latest: int, output: str, concurrent: int, skip_ex
     podcast-dl "https://podcasts.apple.com/us/podcast/xxx/id123456789?i=1000123456"
     """
     try:
-        # 打印横幅和免责声明（已移至 casts_down.py 统一入口）
-        # print_banner()
-        # print_disclaimer()
-
         click.echo(f"[*] Parsing: {url}\n")
 
         # 判断 URL 类型和提取单集信息

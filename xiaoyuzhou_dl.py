@@ -252,43 +252,6 @@ class XiaoyuzhouDownloader:
             click.echo(f"\nDownload complete: {success_count}/{len(results)} succeeded")
 
 
-def print_banner():
-    """打印 ASCII 横幅"""
-    banner = r"""
-__  __(_) __ _  ___  _   _ _   _ ______ __   _  ___  _   _
-\ \/ /| |/ _` |/ _ \| | | | | | |_  / _` \ | | |/ _ \| | | |
- \  / | | (_| | (_) | |_| | |_| |/ / (_| |\ \_/ / (_) | |_| |
- /\_\ |_|\__,_|\___/ \__, |\__,_/___\__, | \___/ \___/ \__,_|
-                     |___/           __/ |
-                                    |___/
-                Xiaoyuzhou Podcast Downloader
-"""
-    click.echo(banner)
-
-
-def print_disclaimer():
-    """打印免责声明"""
-    disclaimer = """
-+================================================================+
-|                      [!] DISCLAIMER                            |
-+================================================================+
-|                                                                |
-| This project is for EDUCATIONAL purposes ONLY.                 |
-| Any destructive or commercial infringement is PROHIBITED.      |
-|                                                                |
-| 该项目仅用于学习端到端项目开发使用                                  |
-| 严禁用于任何破坏或者商业侵害活动                                    |
-|                                                                |
-| By using this tool, you agree to:                              |
-| - Use for personal learning and research only                  |
-| - Comply with laws and platform terms of service               |
-| - Respect content creators' copyrights                         |
-|                                                                |
-+================================================================+
-"""
-    click.echo(disclaimer)
-
-
 @click.command()
 @click.argument('url')
 @click.option('--output', '-o', type=click.Path(), default='./xiaoyuzhou_downloads', help='输出目录')
@@ -326,9 +289,6 @@ def main(url: str, output: str, concurrent: int, skip_existing: bool, latest: in
     3. Use episode links to download one by one
     """
     try:
-        # 打印横幅和免责声明（已移至 casts_down.py 统一入口）
-        # print_banner()
-        # print_disclaimer()
         downloader = XiaoyuzhouDownloader(concurrent=concurrent)
         output_dir = Path(output)
 
