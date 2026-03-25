@@ -110,23 +110,26 @@ class PodcastDownloader:
         downloaded_files: list[Path] = []
 
         async with aiohttp.ClientSession() as session:
-            tasks = []
             path_map: dict[int, Path] = {}
+
+            async def _indexed(idx: int, episode: PodcastEpisode, path: Path):
+                result = await self.download_episode(session, episode, path, skip_existing)
+                return idx, result
+
+            futs = []
             for i, episode in enumerate(episodes):
                 filename = episode.sanitize_filename(podcast_name)
                 output_path = output_dir / filename
                 path_map[i] = output_path
-
-                task = self.download_episode(session, episode, output_path, skip_existing)
-                tasks.append((i, task))
+                futs.append(asyncio.ensure_future(
+                    _indexed(i, episode, output_path)
+                ))
 
             # 使用 tqdm 显示进度
             results = []
-            with tqdm(total=len(tasks), desc="Download Progress", unit="ep") as pbar:
-                coros = {asyncio.ensure_future(t): idx for idx, t in tasks}
-                for future in asyncio.as_completed(list(coros.keys())):
-                    result = await future
-                    idx = coros[future]
+            with tqdm(total=len(futs), desc="Download Progress", unit="ep") as pbar:
+                for coro in asyncio.as_completed(futs):
+                    idx, result = await coro
                     results.append((idx, result))
                     pbar.update(1)
 
