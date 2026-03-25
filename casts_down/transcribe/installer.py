@@ -11,8 +11,13 @@ def detect_platform() -> str:
         return "mac_arm64" if machine == "arm64" else "mac_intel"
     return "linux"
 
-def get_install_packages(plat: str) -> list[str]:
+def get_install_packages(plat: str, backend: str = "auto") -> list[str]:
     base = ["faster-whisper>=1.0.0,<2.0.0"]
+    if backend == "faster-whisper":
+        return base
+    if backend == "mlx-whisper":
+        return ["mlx-whisper>=0.4.0,<1.0.0"] + base
+    # auto
     if plat == "mac_arm64":
         return ["mlx-whisper>=0.4.0,<1.0.0"] + base
     return base
@@ -37,15 +42,20 @@ def _predownload_model(model: str = "small") -> bool:
         click.echo(f"[!] Model download failed: {e}", err=True)
         return False
 
-def run_setup(model: str = "small") -> None:
+def run_setup(model: str = "small", backend: str = "auto") -> None:
     click.echo("[*] Detecting environment...")
     plat = detect_platform()
     labels = {"mac_arm64": "macOS arm64 (Apple Silicon)", "mac_intel": "macOS x86_64 (Intel)", "linux": "Linux"}
     click.echo(f"[*] Platform: {labels.get(plat, plat)}")
-    packages = get_install_packages(plat)
+    packages = get_install_packages(plat, backend=backend)
     click.echo(f"[*] Installing: {', '.join(packages)}")
+    click.confirm(
+        "[?] Install the above packages via pip?",
+        default=True,
+        abort=True,
+    )
     if not _pip_install(packages):
-        if plat == "mac_arm64":
+        if plat == "mac_arm64" and backend == "auto":
             click.echo("[*] Retrying with faster-whisper only...")
             if not _pip_install(["faster-whisper>=1.0.0,<2.0.0"]):
                 click.echo("[!] Setup failed. Check error messages above.", err=True)

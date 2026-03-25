@@ -37,3 +37,24 @@ class TestGetInstallPackages:
         pkgs = get_install_packages("linux")
         assert "faster-whisper>=1.0.0,<2.0.0" in pkgs
         assert not any("mlx" in p for p in pkgs)
+
+class TestRunSetup:
+    def test_prompts_before_install(self):
+        from unittest.mock import patch
+        with patch("casts_down.transcribe.installer._pip_install") as mock_pip, \
+             patch("casts_down.transcribe.installer._predownload_model"), \
+             patch("casts_down.transcribe.installer.click.confirm"):
+            from casts_down.transcribe.installer import run_setup
+            run_setup()
+        mock_pip.assert_called()
+
+    def test_backend_faster_whisper_only(self):
+        from casts_down.transcribe.installer import get_install_packages
+        pkgs = get_install_packages("mac_arm64", backend="faster-whisper")
+        assert len(pkgs) == 1
+        assert "faster-whisper" in pkgs[0]
+
+    def test_backend_mlx_whisper(self):
+        from casts_down.transcribe.installer import get_install_packages
+        pkgs = get_install_packages("linux", backend="mlx-whisper")
+        assert any("mlx-whisper" in p for p in pkgs)
