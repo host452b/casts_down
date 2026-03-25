@@ -18,6 +18,16 @@ class TestMainGroup:
         result = runner.invoke(main, [])
         assert result.exit_code == 0
 
+    def test_version_matches_pyproject(self):
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+        from casts_down import __version__
+        with open("pyproject.toml", "rb") as f:
+            pyproject = tomllib.load(f)
+        assert pyproject["project"]["version"] == __version__
+
 class TestTranscribeFlag:
     @patch("casts_down.cli._run_transcription")
     @patch("casts_down.cli._download_podcast")

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "casts_down"
-version = "2.1.8"
+version = "2.2.1"
 description = "Cross-platform CLI for downloading and transcribing podcasts with local Whisper speech-to-text"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -44,9 +44,9 @@ metal = ["mlx-whisper>=0.4.0,<1.0.0"]
 dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
 
 [project.urls]
-Homepage = "https://github.com/clemente0731/casts_down"
-Repository = "https://github.com/clemente0731/casts_down"
-Issues = "https://github.com/clemente0731/casts_down/issues"
+Homepage = "https://github.com/host452b/casts_down"
+Repository = "https://github.com/host452b/casts_down"
+Issues = "https://github.com/host452b/casts_down/issues"
 
 [project.scripts]
 casts-down = "casts_down.cli:main"
