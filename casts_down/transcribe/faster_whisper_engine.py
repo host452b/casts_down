@@ -54,10 +54,10 @@ class FasterWhisperEngine(TranscribeEngine):
             segments = self._do_transcribe(audio_path, language)
         except RuntimeError as e:
             if "libcublas" in str(e) or "CUDA" in str(e) or "cuda" in str(e):
-                click.echo(f"[!] CUDA error: {e}")
-                click.echo("[!] Hint: CUDA libraries may be missing or version incompatible.")
-                click.echo("[!]   Check with: find /usr/local/ -name '*libcublas.so*'")
-                click.echo("[!]   Fix with:   pip install nvidia-cublas-cu12 nvidia-cudnn-cu12")
+                click.echo(click.style(f"[!] CUDA error: {e}", fg="yellow"))
+                click.echo(click.style("[!] Hint: CUDA libraries may be missing or version incompatible.", fg="yellow"))
+                click.echo(click.style("[!]   Check with: find /usr/local/ -name '*libcublas.so*'", fg="yellow"))
+                click.echo(click.style("[!]   Fix with:   pip install nvidia-cublas-cu12 nvidia-cudnn-cu12", fg="yellow"))
                 click.echo("[*] Falling back to CPU...")
                 self._load_model("cpu")
                 segments = self._do_transcribe(audio_path, language)
