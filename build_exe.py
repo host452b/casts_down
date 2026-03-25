@@ -79,8 +79,19 @@ def build_zipapp():
     return output_path
 
 
+def _ensure_build_tools():
+    """Install build and twine if not present."""
+    for mod, pkg in [('build', 'build'), ('twine', 'twine')]:
+        try:
+            __import__(mod)
+        except ImportError:
+            click.echo(f"[*] Installing {pkg}...")
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', pkg, '-q'])
+
+
 def build_dist():
     """Build wheel + sdist for PyPI distribution."""
+    _ensure_build_tools()
     click.echo("[*] Building wheel + sdist...")
     result = subprocess.run(
         [sys.executable, '-m', 'build'],
