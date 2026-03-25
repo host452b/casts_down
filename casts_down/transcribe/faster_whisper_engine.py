@@ -68,19 +68,34 @@ class FasterWhisperEngine(TranscribeEngine):
         segments_iter, info = self._model.transcribe(
             str(audio_path), language=language, word_timestamps=False,
         )
-        results = [Segment(start=s.start, end=s.end, text=s.text.strip()) for s in segments_iter]
-        elapsed = time.monotonic() - t0
 
-        # Observability: audio duration, segments, speed
         audio_duration = info.duration
         audio_mins = int(audio_duration // 60)
         audio_secs = int(audio_duration % 60)
-        speed_ratio = audio_duration / elapsed if elapsed > 0 else 0
+        click.echo(f"[*] Audio duration: {audio_mins}m{audio_secs:02d}s, lang={info.language} prob={info.language_probability:.2f}")
 
+        # Iterate segments with live progress
+        results = []
+        last_progress_pct = -1
+        for s in segments_iter:
+            results.append(Segment(start=s.start, end=s.end, text=s.text.strip()))
+
+            # Print progress every 10%
+            if audio_duration > 0:
+                pct = int(s.end / audio_duration * 100)
+                pct = min(pct, 100)
+                progress_step = pct // 10 * 10
+                if progress_step > last_progress_pct:
+                    last_progress_pct = progress_step
+                    elapsed = time.monotonic() - t0
+                    end_mins = int(s.end // 60)
+                    end_secs = int(s.end % 60)
+                    click.echo(f"[*] {pct:3d}% | {end_mins}m{end_secs:02d}s / {audio_mins}m{audio_secs:02d}s | {len(results)} segments | {elapsed:.0f}s elapsed")
+
+        elapsed = time.monotonic() - t0
+        speed_ratio = audio_duration / elapsed if elapsed > 0 else 0
         click.echo(
-            f"[*] Done: {len(results)} segments, "
-            f"audio {audio_mins}m{audio_secs:02d}s, "
-            f"took {elapsed:.1f}s ({speed_ratio:.1f}x realtime), "
-            f"lang={info.language} prob={info.language_probability:.2f}"
+            f"[+] Transcription complete: {len(results)} segments, "
+            f"{elapsed:.1f}s ({speed_ratio:.1f}x realtime)"
         )
         return results
