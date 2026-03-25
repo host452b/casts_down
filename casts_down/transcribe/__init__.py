@@ -87,4 +87,7 @@ def print_report(results: list[dict]) -> None:
         else:
             click.echo(f"[-] {name} -> FAILED: {r['error']}")
     succeeded = sum(1 for r in results if r["success"])
-    click.echo(f"Summary: {succeeded}/{len(results)} succeeded")
+    total_time = sum(r["duration"] for r in results)
+    total_mins = int(total_time // 60)
+    total_secs = int(total_time % 60)
+    click.echo(f"Summary: {succeeded}/{len(results)} succeeded, total time {total_mins}m{total_secs:02d}s")
