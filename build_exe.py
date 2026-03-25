@@ -97,7 +97,36 @@ def build_dist():
 
 
 def publish_pypi(test: bool = False):
-    """Upload dist/* to PyPI using twine."""
+    """Upload dist/* to PyPI using twine.
+
+    Authentication via environment variables:
+      TWINE_USERNAME  - PyPI username (use __token__ for API tokens)
+      TWINE_PASSWORD  - PyPI API token
+    Or for TestPyPI:
+      TEST_PYPI_TOKEN - TestPyPI API token
+    """
+    # Check for API token
+    import os
+    if test:
+        token = os.environ.get('TEST_PYPI_TOKEN') or os.environ.get('TWINE_PASSWORD')
+        env_name = 'TEST_PYPI_TOKEN'
+    else:
+        token = os.environ.get('PYPI_TOKEN') or os.environ.get('TWINE_PASSWORD')
+        env_name = 'PYPI_TOKEN'
+
+    if not token:
+        target = 'TestPyPI' if test else 'PyPI'
+        click.echo(f"[!] No {target} credentials found.", err=True)
+        click.echo(f"    Set environment variable before publishing:", err=True)
+        click.echo(f"    export {env_name}=pypi-xxxxxxxx", err=True)
+        click.echo(f"    Or: export TWINE_USERNAME=__token__ TWINE_PASSWORD=pypi-xxxxxxxx", err=True)
+        sys.exit(1)
+
+    # Set twine env vars from our token
+    env = os.environ.copy()
+    env['TWINE_USERNAME'] = '__token__'
+    env['TWINE_PASSWORD'] = token
+
     dist_files = list(Path('dist').glob('*'))
     if not dist_files:
         click.echo("[!] No dist/ files found. Run build first: python build_exe.py --mode pip", err=True)
@@ -115,16 +144,18 @@ def publish_pypi(test: bool = False):
 
     # Upload
     repo_arg = ['--repository', 'testpypi'] if test else []
-    click.echo(f"[*] Uploading to {'TestPyPI' if test else 'PyPI'}...")
+    target = 'TestPyPI' if test else 'PyPI'
+    click.echo(f"[*] Uploading to {target}...")
     upload = subprocess.run(
         [sys.executable, '-m', 'twine', 'upload'] + repo_arg + [str(f) for f in dist_files],
         check=False,
+        env=env,
     )
     if upload.returncode != 0:
-        click.echo("[!] Upload failed. Check credentials: twine configure", err=True)
+        click.echo(f"[!] Upload to {target} failed", err=True)
         sys.exit(1)
 
-    click.echo("[+] Published!")
+    click.echo(f"[+] Published to {target}!")
 
 
 @click.command()
