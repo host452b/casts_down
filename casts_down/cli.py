@@ -204,7 +204,11 @@ def _run_transcription(files: list[Path], model: str, language: str | None = Non
         )
         print_report(results)
     except RuntimeError as e:
-        click.echo(f"[!] {e}", err=True)
+        click.echo(f"\n[!] {e}", err=True)
+        click.echo("\n    To install transcription support, run:\n", err=True)
+        click.echo("      casts-down setup-transcribe\n", err=True)
+        click.echo("    Or manually:", err=True)
+        click.echo('      pip install "faster-whisper>=1.0.0,<2.0.0"', err=True)
         sys.exit(1)
     except KeyboardInterrupt:
         click.echo("\n[!] Transcription interrupted by user")
