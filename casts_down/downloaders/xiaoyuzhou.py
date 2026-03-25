@@ -3,7 +3,6 @@
 import asyncio
 import json
 import re
-import sys
 from pathlib import Path
 
 import aiohttp
@@ -197,7 +196,7 @@ class XiaoyuzhouDownloader:
                 downloaded_files.append(output_path)
             else:
                 click.echo(f"[-] {message}", err=True)
-                sys.exit(1)
+                raise RuntimeError(message)
 
         return downloaded_files
 
@@ -216,8 +215,7 @@ class XiaoyuzhouDownloader:
             podcast_name, episodes = await self.get_podcast_episodes(session, podcast_url)
 
             if not episodes:
-                click.echo("[!] No episodes found", err=True)
-                sys.exit(1)
+                raise ValueError("No episodes found")
 
             # 选择要下载的剧集
             if latest:
