@@ -19,20 +19,18 @@ class PodcastEpisode:
 
     def sanitize_filename(self, podcast_name: str) -> str:
         """生成安全的文件名（空格替换为下划线）"""
-        # 移除非法字符
         safe_title = re.sub(r'[<>:"/\\|?*]', '', self.title)
         safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name)
-
-        # 空格替换为下划线
         safe_title = safe_title.replace(' ', '_')
         safe_podcast = safe_podcast.replace(' ', '_')
 
-        # 限制长度
-        safe_title = safe_title[:100]
-
-        # 获取文件扩展名
         parsed = urlparse(self.audio_url)
         ext = Path(parsed.path).suffix or '.mp3'
+
+        # Cap total filename to 240 bytes (reserve for ext + .tmp suffix)
+        max_base = 240 - len(ext.encode('utf-8')) - 3  # 3 for "_-_"
+        safe_podcast = safe_podcast[:max_base // 2]
+        safe_title = safe_title[:max_base - len(safe_podcast.encode('utf-8'))]
 
         return f"{safe_podcast}_-_{safe_title}{ext}"
 

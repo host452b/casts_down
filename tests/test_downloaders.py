@@ -36,7 +36,12 @@ class TestPodcastEpisode:
     def test_title_length_limit(self):
         ep = PodcastEpisode(title="A" * 200, audio_url="https://example.com/audio.mp3")
         result = ep.sanitize_filename("P")
-        assert len(result) < 200
+        assert len(result.encode('utf-8')) <= 250
+
+    def test_total_filename_length_capped(self):
+        ep = PodcastEpisode(title="A" * 200, audio_url="https://example.com/audio.mp3")
+        result = ep.sanitize_filename("B" * 200)
+        assert len(result.encode('utf-8')) <= 250
 
 class TestApplePodcastsParser:
     def test_extract_episode_id(self):
@@ -521,6 +526,13 @@ class TestDryRunXiaoyuzhouParser:
         html = '<script id="__NEXT_DATA__" type="application/json">{"other": 1}</script>'
         with pytest.raises(ValueError, match="props"):
             dl.extract_episode_data(html)
+
+    def test_library_code_does_not_call_sys_exit(self):
+        """Library code should raise exceptions, not sys.exit."""
+        import inspect
+        from casts_down.downloaders.xiaoyuzhou import XiaoyuzhouDownloader
+        source = inspect.getsource(XiaoyuzhouDownloader)
+        assert "sys.exit" not in source
 
 
 class TestDryRunTranscriptionPipeline:
