@@ -68,7 +68,25 @@ def build_executable():
     """使用 PyInstaller 构建可执行文件"""
     click.echo("🔨 开始构建可执行文件...\n")
 
-    # 运行 PyInstaller
+    # Only bundle what casts_down actually needs.
+    # Exclude heavy ML/scientific packages that PyInstaller picks up
+    # from the environment but are NOT used by the download CLI.
+    # (Transcription engines are optional and installed separately.)
+    exclude_modules = [
+        'torch', 'torchvision', 'torchaudio', 'torchao',
+        'tensorflow', 'keras',
+        'numpy', 'scipy', 'pandas', 'sklearn', 'scikit-learn',
+        'matplotlib', 'PIL', 'cv2', 'opencv',
+        'h5py', 'numba', 'llvmlite',
+        'librosa', 'soundfile',
+        'datasets', 'pyarrow',
+        'apex', 'transformers', 'tokenizers',
+        'faster_whisper', 'mlx_whisper', 'mlx', 'ctranslate2',
+        'Cryptodome', 'cryptography',
+        'IPython', 'jupyter', 'notebook',
+        'pytest', 'setuptools', 'pip',
+    ]
+
     cmd = [
         'pyinstaller',
         '--clean',
@@ -76,13 +94,15 @@ def build_executable():
         '--name', 'casts-down',
         '--hidden-import', 'casts_down',
         '--hidden-import', 'casts_down.cli',
-        '--hidden-import', 'casts_down.downloaders',
         '--hidden-import', 'casts_down.downloaders.base',
         '--hidden-import', 'casts_down.downloaders.podcast',
         '--hidden-import', 'casts_down.downloaders.xiaoyuzhou',
-        '--collect-submodules', 'casts_down',
-        'casts_down/cli.py'
     ]
+
+    for mod in exclude_modules:
+        cmd.extend(['--exclude-module', mod])
+
+    cmd.append('casts_down/cli.py')
 
     click.echo(f"执行命令: {' '.join(cmd)}\n")
 
