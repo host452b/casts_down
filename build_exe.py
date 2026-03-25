@@ -105,9 +105,10 @@ def publish_pypi(test: bool = False):
 
     # Check packages first
     click.echo("[*] Checking packages...")
-    check = subprocess.run([sys.executable, '-m', 'twine', 'check', 'dist/*'],
-                           shell=False, check=False,
-                           args=[sys.executable, '-m', 'twine', 'check'] + [str(f) for f in dist_files])
+    check = subprocess.run(
+        [sys.executable, '-m', 'twine', 'check'] + [str(f) for f in dist_files],
+        check=False,
+    )
     if check.returncode != 0:
         click.echo("[!] Package check failed", err=True)
         sys.exit(1)
