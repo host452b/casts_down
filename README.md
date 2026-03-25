@@ -85,7 +85,7 @@ pip install -e ".[dev]"
 ### Build & Publish
 
 ```bash
-git clone https://github.com/clemente0731/casts_down.git
+git clone https://github.com/host452b/casts_down.git
 cd casts_down
 
 make build          # .pyz standalone executable (<1s)
@@ -272,7 +272,7 @@ casts-down transcribe ./podcasts/ --model medium --language zh
 ### Abnormal file names
 
 - Tool automatically cleans illegal characters from filenames
-- If issues persist, please submit an [Issue](https://github.com/clemente0731/casts_down/issues)
+- If issues persist, please submit an [Issue](https://github.com/host452b/casts_down/issues)
 
 ## Quick Test
 
@@ -293,7 +293,7 @@ MIT License. Copyright (c) 2024 Casts Down Contributors.
 
 ## Contributing
 
-Contributions are welcome! Please submit [Issues](https://github.com/clemente0731/casts_down/issues) and Pull Requests.
+Contributions are welcome! Please submit [Issues](https://github.com/host452b/casts_down/issues) and Pull Requests.
 
 ---
 
