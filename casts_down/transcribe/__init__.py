@@ -53,6 +53,7 @@ def transcribe_batch(
         start_time = time.monotonic()
         try:
             segments = engine.transcribe(audio_path, language=language)
+            click.echo(f"[*] Writing .srt + .txt for {audio_path.name} ...")
             write_outputs(audio_path, segments)
             elapsed = time.monotonic() - start_time
             srt_path = audio_path.with_suffix(".srt").resolve()
