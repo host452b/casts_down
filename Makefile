@@ -1,4 +1,4 @@
-.PHONY: help install dev build clean release test lint
+.PHONY: help install dev build wheel clean release test lint
 
 help:
 	@echo "Casts Down - Podcast Downloader & Transcriber"
@@ -8,7 +8,8 @@ help:
 	@echo "  make dev        - Install with dev dependencies"
 	@echo "  make test       - Run test suite"
 	@echo "  make lint       - Check code compiles"
-	@echo "  make build      - Build executable (PyInstaller)"
+	@echo "  make build      - Build .pyz executable (zipapp, <1s)"
+	@echo "  make wheel      - Build wheel for pip distribution"
 	@echo "  make clean      - Clean build artifacts"
 	@echo "  make release    - Clean + build release"
 	@echo ""
@@ -42,8 +43,13 @@ lint:
 	@echo "All files compile OK"
 
 build:
-	@echo "Building executable..."
+	@echo "Building .pyz executable..."
 	python build_exe.py
+	@echo "Done"
+
+wheel:
+	@echo "Building wheel..."
+	python build_exe.py --mode pip
 	@echo "Done"
 
 clean:
