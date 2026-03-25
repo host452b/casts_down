@@ -73,12 +73,17 @@ cd casts_down
 pip install -e ".[dev]"
 ```
 
-### Option 4: Build standalone executable
+### Option 4: Build & Publish
 
 ```bash
 git clone https://github.com/clemente0731/casts_down.git
 cd casts_down
-make build          # builds release/casts-down-<os>-<arch>.pyz in <1 second
+
+make build          # .pyz standalone executable (<1s)
+make dist           # wheel + sdist for PyPI
+make publish        # build + upload to PyPI
+make publish-test   # build + upload to TestPyPI
+make release        # clean + build all (.pyz + wheel + sdist)
 ```
 
 See [BUILD.md](BUILD.md) for details.

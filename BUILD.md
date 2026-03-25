@@ -5,6 +5,7 @@
 - Python 3.10+
 - pip
 - (optional) make
+- For PyPI publishing: `pip install build twine`
 
 ## Quick Start
 
@@ -23,10 +24,16 @@ make test
 # Build .pyz executable (<1 second)
 make build
 
-# Build wheel for pip distribution
-make wheel
+# Build wheel + sdist for PyPI
+make dist
 
-# Full release (clean + build)
+# Build and publish to PyPI
+make publish
+
+# Build and publish to TestPyPI (for testing)
+make publish-test
+
+# Full release (clean + build .pyz + wheel + sdist)
 make release
 
 # Clean build artifacts
@@ -42,8 +49,14 @@ pip install -e .
 # Build .pyz executable
 python build_exe.py
 
-# Build wheel
+# Build wheel + sdist
 python build_exe.py --mode pip
+
+# Build and publish to PyPI
+python build_exe.py --mode pip --publish
+
+# Build and publish to TestPyPI
+python build_exe.py --mode pip --publish --test-pypi
 
 # Clean
 python build_exe.py --clean

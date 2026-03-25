@@ -79,38 +79,78 @@ def build_zipapp():
     return output_path
 
 
-def build_wheel():
-    """Build a wheel for pip distribution."""
-    click.echo("[*] Building wheel...")
+def build_dist():
+    """Build wheel + sdist for PyPI distribution."""
+    click.echo("[*] Building wheel + sdist...")
     result = subprocess.run(
-        [sys.executable, '-m', 'build', '--wheel'],
+        [sys.executable, '-m', 'build'],
         check=False,
     )
     if result.returncode != 0:
-        click.echo("[!] Wheel build failed. Install build: pip install build", err=True)
+        click.echo("[!] Build failed. Install build: pip install build", err=True)
         sys.exit(1)
 
-    wheels = list(Path('dist').glob('*.whl'))
-    if wheels:
-        click.echo(f"[+] Built: {wheels[0]} ({wheels[0].stat().st_size / 1024:.0f} KB)")
-    return wheels[0] if wheels else None
+    artifacts = list(Path('dist').glob('*'))
+    for a in artifacts:
+        click.echo(f"[+] {a.name} ({a.stat().st_size / 1024:.0f} KB)")
+    return artifacts
+
+
+def publish_pypi(test: bool = False):
+    """Upload dist/* to PyPI using twine."""
+    dist_files = list(Path('dist').glob('*'))
+    if not dist_files:
+        click.echo("[!] No dist/ files found. Run build first: python build_exe.py --mode pip", err=True)
+        sys.exit(1)
+
+    # Check packages first
+    click.echo("[*] Checking packages...")
+    check = subprocess.run([sys.executable, '-m', 'twine', 'check', 'dist/*'],
+                           shell=False, check=False,
+                           args=[sys.executable, '-m', 'twine', 'check'] + [str(f) for f in dist_files])
+    if check.returncode != 0:
+        click.echo("[!] Package check failed", err=True)
+        sys.exit(1)
+
+    # Upload
+    repo_arg = ['--repository', 'testpypi'] if test else []
+    click.echo(f"[*] Uploading to {'TestPyPI' if test else 'PyPI'}...")
+    upload = subprocess.run(
+        [sys.executable, '-m', 'twine', 'upload'] + repo_arg + [str(f) for f in dist_files],
+        check=False,
+    )
+    if upload.returncode != 0:
+        click.echo("[!] Upload failed. Check credentials: twine configure", err=True)
+        sys.exit(1)
+
+    click.echo("[+] Published!")
 
 
 @click.command()
 @click.option('--clean', is_flag=True, help='Clean build artifacts only')
 @click.option('--mode', type=click.Choice(['zipapp', 'pip']), default='zipapp',
               help='Build mode (default: zipapp)')
-def main(clean, mode):
+@click.option('--publish', is_flag=True, help='Upload dist/* to PyPI after building')
+@click.option('--test-pypi', is_flag=True, help='Upload to TestPyPI instead of PyPI')
+def main(clean, mode, publish, test_pypi):
     """
     Casts Down build tool.
 
     \b
-    Build single-file executable (fast, ~seconds):
+    Build single-file executable (fast, <1s):
       python build_exe.py
 
     \b
-    Build wheel for pip:
+    Build wheel + sdist for PyPI:
       python build_exe.py --mode pip
+
+    \b
+    Build and publish to PyPI:
+      python build_exe.py --mode pip --publish
+
+    \b
+    Build and publish to TestPyPI:
+      python build_exe.py --mode pip --publish --test-pypi
 
     \b
     Clean:
@@ -131,9 +171,12 @@ def main(clean, mode):
         click.echo(f"\nUsage:\n  ./{output} <URL>\n  ./{output} --help")
         click.echo("\nNote: Requires Python 3.10+ and dependencies installed on target.")
     else:
-        output = build_wheel()
-        if output:
-            click.echo(f"\nInstall:\n  pip install {output}")
+        build_dist()
+        if publish:
+            publish_pypi(test=test_pypi)
+        else:
+            click.echo("\nTo publish:\n  python build_exe.py --mode pip --publish")
+            click.echo("  python build_exe.py --mode pip --publish --test-pypi")
 
 
 if __name__ == '__main__':

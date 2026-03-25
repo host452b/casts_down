@@ -1,17 +1,19 @@
-.PHONY: help install dev build wheel clean release test lint
+.PHONY: help install dev build dist publish publish-test clean release test lint
 
 help:
 	@echo "Casts Down - Podcast Downloader & Transcriber"
 	@echo ""
 	@echo "Commands:"
-	@echo "  make install    - Install dependencies"
-	@echo "  make dev        - Install with dev dependencies"
-	@echo "  make test       - Run test suite"
-	@echo "  make lint       - Check code compiles"
-	@echo "  make build      - Build .pyz executable (zipapp, <1s)"
-	@echo "  make wheel      - Build wheel for pip distribution"
-	@echo "  make clean      - Clean build artifacts"
-	@echo "  make release    - Clean + build release"
+	@echo "  make install      - Install package (editable)"
+	@echo "  make dev          - Install with dev dependencies"
+	@echo "  make test         - Run test suite"
+	@echo "  make lint         - Check code compiles"
+	@echo "  make build        - Build .pyz executable (<1s)"
+	@echo "  make dist         - Build wheel + sdist for PyPI"
+	@echo "  make publish      - Build and upload to PyPI"
+	@echo "  make publish-test - Build and upload to TestPyPI"
+	@echo "  make clean        - Clean build artifacts"
+	@echo "  make release      - Clean + build all"
 	@echo ""
 
 install:
@@ -47,10 +49,18 @@ build:
 	python build_exe.py
 	@echo "Done"
 
-wheel:
-	@echo "Building wheel..."
+dist:
+	@echo "Building wheel + sdist..."
 	python build_exe.py --mode pip
 	@echo "Done"
+
+publish: dist
+	@echo "Publishing to PyPI..."
+	python build_exe.py --mode pip --publish
+
+publish-test: dist
+	@echo "Publishing to TestPyPI..."
+	python build_exe.py --mode pip --publish --test-pypi
 
 clean:
 	@echo "Cleaning build artifacts..."
@@ -59,5 +69,5 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@echo "Done"
 
-release: clean build
-	@echo "Release ready — check release/ directory"
+release: clean build dist
+	@echo "Release ready — .pyz in release/, wheel+sdist in dist/"
