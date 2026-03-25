@@ -75,7 +75,7 @@ def detect_downloader(url: str) -> str:
 # Download helpers (fully functional, adapted from the original CLIs)
 # ---------------------------------------------------------------------------
 
-def _download_podcast(
+async def _download_podcast(
     url: str,
     download_all: bool,
     latest: int,
@@ -107,12 +107,9 @@ def _download_podcast(
             is_single_episode = True
             click.echo(f"[*] Detected episode link")
 
-        # Fetch RSS URL and title in one request
-        async def fetch_metadata():
-            async with aiohttp.ClientSession() as session:
-                return await ApplePodcastsParser.extract_metadata_async(session, url)
-
-        rss_url, episode_title = asyncio.run(fetch_metadata())
+        # Fetch RSS URL and title
+        async with aiohttp.ClientSession() as session:
+            rss_url, episode_title = await ApplePodcastsParser.extract_metadata_async(session, url)
 
         if not rss_url:
             click.echo("[!] Failed to extract RSS URL from Apple Podcasts", err=True)
@@ -155,17 +152,17 @@ def _download_podcast(
     output_dir = Path(output)
     downloader = PodcastDownloader(concurrent=concurrent)
 
-    downloaded_files = asyncio.run(downloader.download_all(
+    downloaded_files = await downloader.download_all(
         selected_episodes,
         podcast_name,
         output_dir,
         skip_existing,
-    ))
+    )
 
     return downloaded_files
 
 
-def _download_xiaoyuzhou(
+async def _download_xiaoyuzhou(
     url: str,
     output: str,
     concurrent: int,
@@ -185,15 +182,9 @@ def _download_xiaoyuzhou(
 
     # Determine link type
     if '/episode/' in url:
-        # Single episode download
-        downloaded_files = asyncio.run(
-            downloader.download_episode_by_url(url, output_dir, skip_existing)
-        )
+        downloaded_files = await downloader.download_episode_by_url(url, output_dir, skip_existing)
     elif '/podcast/' in url:
-        # Batch podcast download
-        downloaded_files = asyncio.run(
-            downloader.download_podcast(url, output_dir, skip_existing, latest)
-        )
+        downloaded_files = await downloader.download_podcast(url, output_dir, skip_existing, latest)
     else:
         click.echo("[!] Unrecognized URL format", err=True)
         click.echo("Supported formats:", err=True)
@@ -277,9 +268,9 @@ class _CastsDownGroup(click.Group):
 @click.group(cls=_CastsDownGroup, invoke_without_command=True)
 @click.argument('url', required=False, default=None)
 @click.option('--all', '-a', 'download_all', is_flag=True, help='Download all episodes')
-@click.option('--latest', '-l', type=int, default=1, help='Download latest N episodes (default: 1)')
+@click.option('--latest', '-l', type=click.IntRange(min=1), default=1, help='Download latest N episodes (default: 1)')
 @click.option('--output', '-o', type=click.Path(), default='./podcasts', help='Output directory')
-@click.option('--concurrent', '-c', type=int, default=3, help='Concurrent downloads (default: 3)')
+@click.option('--concurrent', '-c', type=click.IntRange(min=1, max=20), default=3, help='Concurrent downloads (default: 3)')
 @click.option('--skip-existing', '-s', is_flag=True, help='Skip existing files')
 @click.option('--transcribe/--no-transcribe', '-t/', default=True, help='Transcribe after downloading (default: on)')
 @click.option('--model', '-m', type=str, default='small', help='Whisper model for transcription (default: small)')
@@ -338,6 +329,12 @@ def main(ctx, url, download_all, latest, output, concurrent, skip_existing, tran
 
         check_system_deps()
 
+        # Validate URL scheme
+        parsed_url = urlparse(url)
+        if parsed_url.scheme not in ('http', 'https'):
+            click.echo("[!] Invalid URL: only http:// and https:// URLs are supported", err=True)
+            sys.exit(1)
+
         disclaimer = (
             "DISCLAIMER: For educational purposes only. Respect copyrights.\n"
         )
@@ -349,31 +346,34 @@ def main(ctx, url, download_all, latest, output, concurrent, skip_existing, tran
 
         downloaded_files: list[Path] = []
 
-        if downloader_type == 'xiaoyuzhou':
-            click.echo("Xiaoyuzhou Podcast\n")
-            downloaded_files = _download_xiaoyuzhou(
-                url=url,
-                output=output,
-                concurrent=concurrent,
-                skip_existing=skip_existing,
-                latest=latest if not download_all else None,
-            )
-        else:  # podcast
-            if 'podcasts.apple.com' in url:
-                click.echo("Apple Podcasts\n")
-            elif url.endswith(('.rss', '.xml')):
-                click.echo("RSS Feed\n")
-            else:
-                click.echo("Podcast RSS Feed\n")
+        async def _run_download():
+            if downloader_type == 'xiaoyuzhou':
+                click.echo("Xiaoyuzhou Podcast\n")
+                return await _download_xiaoyuzhou(
+                    url=url,
+                    output=output,
+                    concurrent=concurrent,
+                    skip_existing=skip_existing,
+                    latest=latest if not download_all else None,
+                )
+            else:  # podcast
+                if 'podcasts.apple.com' in url:
+                    click.echo("Apple Podcasts\n")
+                elif url.endswith(('.rss', '.xml')):
+                    click.echo("RSS Feed\n")
+                else:
+                    click.echo("Podcast RSS Feed\n")
 
-            downloaded_files = _download_podcast(
-                url=url,
-                download_all=download_all,
-                latest=latest,
-                output=output,
-                concurrent=concurrent,
-                skip_existing=skip_existing,
-            )
+                return await _download_podcast(
+                    url=url,
+                    download_all=download_all,
+                    latest=latest,
+                    output=output,
+                    concurrent=concurrent,
+                    skip_existing=skip_existing,
+                )
+
+        downloaded_files = asyncio.run(_run_download())
 
         # Post-download transcription (auto by default, --no-transcribe to skip)
         if transcribe and downloaded_files:
@@ -438,4 +438,4 @@ def setup_transcribe(backend):
       casts-down setup-transcribe --backend faster-whisper
     """
     from casts_down.transcribe.installer import run_setup
-    run_setup()
+    run_setup(backend=backend)

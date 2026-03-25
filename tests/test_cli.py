@@ -63,6 +63,45 @@ class TestTranscribeSubcommand:
         result = runner.invoke(main, ["transcribe"])
         assert result.exit_code != 0
 
+
+class TestURLValidation:
+    def test_rejects_file_scheme(self, runner):
+        result = runner.invoke(main, ["file:///etc/passwd"])
+        assert result.exit_code != 0
+        assert "http" in result.output.lower() or "https" in result.output.lower()
+
+    def test_rejects_no_scheme(self, runner):
+        result = runner.invoke(main, ["/etc/passwd"])
+        assert result.exit_code != 0
+
+    def test_accepts_https(self, runner):
+        with patch("casts_down.cli._download_podcast", return_value=[]):
+            result = runner.invoke(main, ["--no-transcribe", "https://example.com/feed.rss"])
+        assert result.exit_code == 0
+
+    def test_accepts_http(self, runner):
+        with patch("casts_down.cli._download_podcast", return_value=[]):
+            result = runner.invoke(main, ["--no-transcribe", "http://example.com/feed.rss"])
+        assert result.exit_code == 0
+
+class TestOptionValidation:
+    def test_concurrent_zero_rejected(self, runner):
+        result = runner.invoke(main, ["--concurrent", "0", "https://example.com/feed.rss"])
+        assert result.exit_code != 0
+
+    def test_concurrent_negative_rejected(self, runner):
+        result = runner.invoke(main, ["-c", "-1", "https://example.com/feed.rss"])
+        assert result.exit_code != 0
+
+    def test_latest_zero_rejected(self, runner):
+        result = runner.invoke(main, ["--latest", "0", "https://example.com/feed.rss"])
+        assert result.exit_code != 0
+
+    def test_latest_negative_rejected(self, runner):
+        result = runner.invoke(main, ["-l", "-1", "https://example.com/feed.rss"])
+        assert result.exit_code != 0
+
+
 class TestCheckSystemDeps:
     """Unit tests for check_system_deps()."""
 
@@ -123,6 +162,11 @@ class TestSetupTranscribe:
         assert result.exit_code == 0
 
     def test_setup_runs_without_error(self, runner):
-        result = runner.invoke(main, ["setup-transcribe"])
+        result = runner.invoke(main, ["setup-transcribe"], input="y\n")
         assert result.exit_code == 0
         assert "Detecting environment" in result.output
+
+    def test_backend_option_passed_through(self, runner):
+        with patch("casts_down.transcribe.installer.run_setup") as mock_setup:
+            result = runner.invoke(main, ["setup-transcribe", "--backend", "faster-whisper"])
+        mock_setup.assert_called_once_with(backend="faster-whisper")
