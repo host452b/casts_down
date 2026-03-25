@@ -252,7 +252,7 @@ class _CastsDownGroup(click.Group):
 @click.option('--output', '-o', type=click.Path(), default='./podcasts', help='Output directory')
 @click.option('--concurrent', '-c', type=int, default=3, help='Concurrent downloads (default: 3)')
 @click.option('--skip-existing', '-s', is_flag=True, help='Skip existing files')
-@click.option('--transcribe', '-t', is_flag=True, help='Transcribe after downloading')
+@click.option('--transcribe/--no-transcribe', '-t/', default=True, help='Transcribe after downloading (default: on)')
 @click.option('--model', '-m', type=str, default='small', help='Whisper model for transcription (default: small)')
 @click.option('--version', is_flag=True, help='Show version')
 @click.pass_context
@@ -344,9 +344,11 @@ def main(ctx, url, download_all, latest, output, concurrent, skip_existing, tran
                 skip_existing=skip_existing,
             )
 
-        # Post-download transcription
+        # Post-download transcription (auto by default, --no-transcribe to skip)
         if transcribe and downloaded_files:
             _run_transcription(downloaded_files, model)
+        elif transcribe and not downloaded_files:
+            click.echo("[!] No files to transcribe (all downloads failed)")
 
     except ValueError as e:
         click.echo(f"[!] Error: {str(e)}", err=True)

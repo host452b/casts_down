@@ -50,19 +50,10 @@ A cross-platform CLI tool for downloading and transcribing podcasts. Supports Ap
 pip install casts_down
 ```
 
-### Option 2: Install with transcription support
+### Option 2: With Metal acceleration (macOS Apple Silicon)
 
 ```bash
-# Install base + auto-detect and install best transcription engine
-pip install casts_down
-casts-down setup-transcribe
-
-# Or manually choose:
-# Linux (CUDA/CPU)
-pip install "casts_down[transcribe]"
-
-# macOS Apple Silicon (Metal acceleration)
-pip install "casts_down[transcribe-metal]"
+pip install "casts_down[metal]"
 ```
 
 ### Option 3: Install from source
@@ -94,8 +85,11 @@ See [BUILD.md](BUILD.md) for details.
 # Download latest episode from any podcast URL
 casts-down "https://podcasts.apple.com/podcast/id123"
 
-# Download + transcribe
-casts-down "https://podcasts.apple.com/podcast/id123" --transcribe
+# Download + auto transcribe (default)
+casts-down "https://podcasts.apple.com/podcast/id123"
+
+# Download without transcription
+casts-down "https://podcasts.apple.com/podcast/id123" --no-transcribe
 
 # Download all episodes from RSS
 casts-down "https://feeds.example.com/podcast.rss" --all
@@ -123,7 +117,7 @@ casts-down <URL> [OPTIONS]
 | `--output DIR` | `-o DIR` | Output directory | `./podcasts` |
 | `--concurrent N` | `-c N` | Parallel downloads | 3 |
 | `--skip-existing` | `-s` | Skip already downloaded files | off |
-| `--transcribe` | `-t` | Transcribe after download | off |
+| `--transcribe/--no-transcribe` | `-t` | Transcribe after download | **on** |
 | `--model NAME` | `-m` | Whisper model for transcription | `small` |
 
 ### Transcribe

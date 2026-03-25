@@ -36,11 +36,11 @@ dependencies = [
     "click>=8.1.0",
     "feedparser>=6.0.10",
     "tqdm>=4.65.0",
+    "faster-whisper>=1.0.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
-transcribe = ["faster-whisper>=1.0.0,<2.0.0"]
-transcribe-metal = ["mlx-whisper>=0.4.0,<1.0.0", "faster-whisper>=1.0.0,<2.0.0"]
+metal = ["mlx-whisper>=0.4.0,<1.0.0"]
 dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
 
 [project.urls]
