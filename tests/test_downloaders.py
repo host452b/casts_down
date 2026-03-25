@@ -57,6 +57,14 @@ class TestApplePodcastsParser:
         ) is None
 
 class TestRSSParser:
+    def _mock_urlopen(self, content=b"<rss></rss>"):
+        """Helper to mock urllib.request.urlopen for RSS fetch."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = content
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        return patch("casts_down.downloaders.podcast.urllib.request.urlopen", return_value=mock_resp)
+
     def test_parse_valid_rss(self):
         from casts_down.downloaders.podcast import RSSParser
         mock_feed = MagicMock()
@@ -66,7 +74,8 @@ class TestRSSParser:
         entry.enclosures = [{"type": "audio/mpeg", "href": "https://example.com/ep.mp3"}]
         entry.get.side_effect = lambda k, d="": {"title": "Episode 1", "published": "2024-01-01"}.get(k, d)
         mock_feed.entries = [entry]
-        with patch("casts_down.downloaders.podcast.feedparser.parse", return_value=mock_feed):
+        with self._mock_urlopen(), \
+             patch("casts_down.downloaders.podcast.feedparser.parse", return_value=mock_feed):
             name, episodes = RSSParser.parse("https://example.com/feed.rss")
             assert name == "Test Podcast"
             assert len(episodes) == 1
@@ -78,7 +87,8 @@ class TestRSSParser:
         mock_feed.bozo = False
         mock_feed.feed.get.return_value = "Empty Podcast"
         mock_feed.entries = []
-        with patch("casts_down.downloaders.podcast.feedparser.parse", return_value=mock_feed):
+        with self._mock_urlopen(), \
+             patch("casts_down.downloaders.podcast.feedparser.parse", return_value=mock_feed):
             name, episodes = RSSParser.parse("https://example.com/feed.rss")
             assert episodes == []
 

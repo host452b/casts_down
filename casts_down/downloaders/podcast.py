@@ -3,6 +3,7 @@
 import json
 import re
 import ssl
+import urllib.request
 
 import aiohttp
 import click
@@ -16,7 +17,7 @@ class RSSParser:
     """RSS 解析器"""
 
     @staticmethod
-    def parse(rss_url: str, episode_title: str | None = None) -> tuple[str, list[PodcastEpisode]]:
+    def parse(rss_url: str, episode_title: str | None = None, timeout: int = 30) -> tuple[str, list[PodcastEpisode]]:
         """
         解析 RSS 源
         返回: (播客名称, 剧集列表)
@@ -24,9 +25,19 @@ class RSSParser:
         参数:
             rss_url: RSS 源地址
             episode_title: 可选的单集标题，如果提供则只返回匹配的剧集
+            timeout: 请求超时时间（秒），默认 30
         """
         try:
-            feed = feedparser.parse(rss_url)
+            req = urllib.request.Request(rss_url, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; CastsDown/2.0)',
+            })
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                rss_content = resp.read()
+        except Exception as e:
+            raise ValueError(f"RSS fetch failed ({rss_url}): {e}")
+
+        try:
+            feed = feedparser.parse(rss_content)
 
             if feed.bozo and not feed.entries:  # 解析错误且无有效条目
                 raise ValueError(f"RSS 解析失败: {feed.bozo_exception}")
