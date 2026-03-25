@@ -8,7 +8,7 @@
       Intelligent Podcast Downloader & Transcriber
 ```
 
-A cross-platform CLI tool for downloading and transcribing podcasts. Supports Apple Podcasts, Xiaoyuzhou, and RSS feeds with optional local speech-to-text powered by Whisper.
+A cross-platform CLI tool for downloading and transcribing podcasts. Supports Apple Podcasts, Xiaoyuzhou, and RSS feeds with built-in local speech-to-text powered by Whisper.
 
 ---
 
@@ -36,7 +36,8 @@ A cross-platform CLI tool for downloading and transcribing podcasts. Supports Ap
   - Xiaoyuzhou / 小宇宙 (single episodes and podcast feeds)
   - Standard RSS 2.0 feeds
 - **Async Concurrent Downloads** - Configurable concurrency for faster batch downloads
-- **Speech-to-Text Transcription** - Local transcription via faster-whisper (CUDA/CPU) or mlx-whisper (Metal)
+- **Auto Transcription** - Downloads are automatically transcribed to text after completion
+- **Built-in Speech-to-Text** - Local transcription via faster-whisper (CUDA/CPU), with optional mlx-whisper (Metal) for Mac
 - **Subtitle Output** - Generates SRT (millisecond precision) and timestamped TXT files
 - **Progress Display** - Real-time download and transcription progress tracking
 - **Episode Selection** - Download all, latest N, or specific episodes from Apple Podcasts links
@@ -44,19 +45,23 @@ A cross-platform CLI tool for downloading and transcribing podcasts. Supports Ap
 
 ## Installation
 
-### Option 1: Install via pip (Recommended)
+### Install via pip
 
 ```bash
 pip install casts_down
 ```
 
-### Option 2: With Metal acceleration (macOS Apple Silicon)
+Includes all dependencies — download, transcription, and Whisper model auto-download. Ready to use immediately.
+
+### macOS Apple Silicon (Metal acceleration)
 
 ```bash
 pip install "casts_down[metal]"
 ```
 
-### Option 3: Install from source
+Adds mlx-whisper for Metal GPU acceleration. Falls back to faster-whisper CPU if unavailable.
+
+### Install from source
 
 ```bash
 git clone https://github.com/clemente0731/casts_down.git
@@ -64,7 +69,7 @@ cd casts_down
 pip install -e ".[dev]"
 ```
 
-### Option 4: Build & Publish
+### Build & Publish
 
 ```bash
 git clone https://github.com/clemente0731/casts_down.git
@@ -82,17 +87,14 @@ See [BUILD.md](BUILD.md) for details.
 ## Quick Start
 
 ```bash
-# Download latest episode from any podcast URL
+# Download and transcribe (transcription is automatic)
 casts-down "https://podcasts.apple.com/podcast/id123"
 
-# Download + auto transcribe (default)
-casts-down "https://podcasts.apple.com/podcast/id123"
+# Download all episodes
+casts-down "https://feeds.example.com/podcast.rss" --all
 
 # Download without transcription
-casts-down "https://podcasts.apple.com/podcast/id123" --no-transcribe
-
-# Download all episodes from RSS
-casts-down "https://feeds.example.com/podcast.rss" --all
+casts-down "https://feeds.example.com/podcast.rss" --no-transcribe
 
 # Xiaoyuzhou
 casts-down "https://www.xiaoyuzhoufm.com/episode/xxx"
@@ -104,7 +106,7 @@ casts-down transcribe ./podcasts/          # entire directory
 
 ## Usage
 
-### Download
+### Download (+ Auto Transcribe)
 
 ```bash
 casts-down <URL> [OPTIONS]
@@ -135,13 +137,13 @@ Transcribe audio files or directories. Outputs `.srt` (subtitle) and `.txt` (tim
 | `--skip-transcribed` | | Skip files already transcribed | on |
 | `--overwrite` | | Force re-transcribe existing outputs | off |
 
-### Setup Transcription
+### Setup (Optional)
 
 ```bash
 casts-down setup-transcribe
 ```
 
-Detects your platform and installs the optimal transcription engine:
+Pre-downloads the Whisper model so the first transcription has zero wait. Also installs mlx-whisper on Mac Apple Silicon for Metal GPU acceleration.
 
 | Platform | Engine | Acceleration |
 |----------|--------|-------------|
@@ -194,10 +196,10 @@ casts-down "https://feeds.npr.org/510318/podcast.xml" --latest 3
 casts-down "https://podcasts.apple.com/us/podcast/the-daily/id1200361736" --all
 ```
 
-### Download and transcribe
+### Download only (no transcription)
 
 ```bash
-casts-down "https://feeds.example.com/podcast.rss" --latest 5 --transcribe
+casts-down "https://feeds.example.com/podcast.rss" --latest 5 --no-transcribe
 ```
 
 ### Batch download with skip existing
@@ -222,7 +224,7 @@ casts-down transcribe ./podcasts/ --model medium --language zh
 | RSS Parsing | feedparser |
 | HTML Parsing | BeautifulSoup4 |
 | Progress Display | tqdm |
-| ASR (optional) | faster-whisper / mlx-whisper |
+| ASR Engine | faster-whisper (built-in) / mlx-whisper (optional Metal) |
 
 ## Notes
 
@@ -231,6 +233,7 @@ casts-down transcribe ./podcasts/ --model medium --language zh
 > 2. **Audio URL Validity** - Some audio URLs contain time-limited tokens that may expire
 > 3. **Rate Limiting** - Frequent requests may trigger platform restrictions
 > 4. **Copyright** - Ensure all downloads are for personal use only
+> 5. **Model Download** - First transcription auto-downloads the Whisper model (~466 MB for `small`). Run `casts-down setup-transcribe` to pre-download.
 
 ## Troubleshooting
 
@@ -248,10 +251,10 @@ casts-down transcribe ./podcasts/ --model medium --language zh
 
 ### Transcription fails
 
-- Run `casts-down setup-transcribe` to ensure engine is installed
 - Try a smaller model: `--model base` or `--model tiny`
 - Check available disk space (models are 75MB - 3GB)
 - For Chinese content, specify language: `--language zh`
+- On Mac Apple Silicon, install Metal support: `pip install "casts_down[metal]"`
 
 ### Abnormal file names
 
@@ -261,13 +264,13 @@ casts-down transcribe ./podcasts/ --model medium --language zh
 ## Quick Test
 
 ```bash
-# Test RSS parsing
+# Test download + transcription
 casts-down "https://feeds.npr.org/510318/podcast.xml" --latest 1
 
-# Test Apple Podcasts
-casts-down "https://podcasts.apple.com/us/podcast/the-daily/id1200361736" --latest 1
+# Test download only
+casts-down "https://podcasts.apple.com/us/podcast/the-daily/id1200361736" --latest 1 --no-transcribe
 
-# Test transcription (after setup-transcribe)
+# Test standalone transcription
 casts-down transcribe ./podcasts/episode.mp3 --model tiny
 ```
 
