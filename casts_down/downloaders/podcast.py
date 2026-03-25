@@ -2,6 +2,7 @@
 
 import json
 import re
+import ssl
 
 import aiohttp
 import click
@@ -110,6 +111,14 @@ class ApplePodcastsParser:
         rss_url = None
         episode_title = None
 
+        # macOS 系统 Python 使用 LibreSSL，可能无法验证某些证书
+        # 创建宽松的 SSL 上下文作为备选
+        _ssl: ssl.SSLContext | bool = False  # 当前使用的 SSL 设置
+        try:
+            _ssl = ssl.create_default_context()
+        except Exception:
+            _ssl = False  # 无法创建默认上下文时禁用验证
+
         # ── 策略1: iTunes Lookup API（最可靠） ──────────────────────
         podcast_id_match = re.search(r'/id(\d+)', apple_url)
         if podcast_id_match:
@@ -119,11 +128,26 @@ class ApplePodcastsParser:
                     f"?id={podcast_id_match.group(1)}&entity=podcast"
                 )
                 async with session.get(
-                    api_url, timeout=aiohttp.ClientTimeout(total=15)
+                    api_url, timeout=aiohttp.ClientTimeout(total=15),
+                    ssl=_ssl,
                 ) as resp:
                     data = await resp.json(content_type=None)
                     if data.get('resultCount', 0) > 0:
                         rss_url = data['results'][0].get('feedUrl')
+            except (ssl.SSLError, aiohttp.ClientConnectorSSLError,
+                    aiohttp.ClientConnectorCertificateError) as e:
+                # SSL 失败时，禁用验证重试一次
+                click.echo(f"[!] SSL error, retrying without verification: {e}", err=True)
+                try:
+                    async with session.get(
+                        api_url, timeout=aiohttp.ClientTimeout(total=15),
+                        ssl=False,
+                    ) as resp:
+                        data = await resp.json(content_type=None)
+                        if data.get('resultCount', 0) > 0:
+                            rss_url = data['results'][0].get('feedUrl')
+                except Exception as e2:
+                    click.echo(f"[!] iTunes API lookup failed: {e2}", err=True)
             except Exception as e:
                 click.echo(f"[!] iTunes API lookup failed: {e}", err=True)
 
@@ -138,6 +162,7 @@ class ApplePodcastsParser:
             async with session.get(
                 apple_url, headers=headers,
                 timeout=aiohttp.ClientTimeout(total=15),
+                ssl=_ssl,
             ) as response:
                 response.raise_for_status()
                 content = await response.text()
