@@ -77,16 +77,26 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## 安装方式
+            ## Install
 
             ```bash
             pip install casts_down
             ```
 
-            ## 使用方式
+            ## Usage
 
             ```bash
+            # Download podcast
             casts-down <URL>
+
+            # Download + transcribe
+            casts-down <URL> --transcribe
+
+            # Transcribe existing audio
+            casts-down transcribe ./file.mp3
+
+            # Setup transcription engine
+            casts-down setup-transcribe
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

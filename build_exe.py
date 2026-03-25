@@ -72,7 +72,16 @@ def build_executable():
     cmd = [
         'pyinstaller',
         '--clean',
-        'casts_down.spec'
+        '--onefile',
+        '--name', 'casts-down',
+        '--hidden-import', 'casts_down',
+        '--hidden-import', 'casts_down.cli',
+        '--hidden-import', 'casts_down.downloaders',
+        '--hidden-import', 'casts_down.downloaders.base',
+        '--hidden-import', 'casts_down.downloaders.podcast',
+        '--hidden-import', 'casts_down.downloaders.xiaoyuzhou',
+        '--collect-submodules', 'casts_down',
+        'casts_down/cli.py'
     ]
 
     click.echo(f"执行命令: {' '.join(cmd)}\n")
