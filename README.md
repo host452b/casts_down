@@ -61,10 +61,23 @@ pip install "casts_down[metal]"
 
 Adds mlx-whisper for Metal GPU acceleration. Falls back to faster-whisper CPU if unavailable.
 
+### Install from GitHub
+
+```bash
+# Latest release
+pip install git+https://github.com/host452b/casts_down.git@v2.2.0
+
+# Latest main branch
+pip install git+https://github.com/host452b/casts_down.git
+
+# SSH
+pip install git+ssh://git@github.com/host452b/casts_down.git@v2.2.0
+```
+
 ### Install from source
 
 ```bash
-git clone https://github.com/clemente0731/casts_down.git
+git clone https://github.com/host452b/casts_down.git
 cd casts_down
 pip install -e ".[dev]"
 ```
