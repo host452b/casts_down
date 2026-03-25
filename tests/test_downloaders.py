@@ -1,6 +1,7 @@
 """Tests for downloader modules after restructure."""
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -218,6 +219,95 @@ class TestExtractMetadataAsync:
         )
         assert rss is None
         assert title == "Page"
+
+
+class TestDownloadAll:
+    """Tests for PodcastDownloader.download_all — as_completed index tracking."""
+
+    @pytest.mark.asyncio
+    async def test_single_episode_download(self):
+        """download_all returns correct file path for a single episode."""
+        from casts_down.downloaders.base import PodcastDownloader, PodcastEpisode
+        import tempfile, aiohttp
+
+        episode = PodcastEpisode(title="Test Ep", audio_url="https://example.com/ep.mp3")
+        dl = PodcastDownloader(concurrent=1)
+
+        # Mock download_episode to return success without network
+        async def fake_download(session, ep, path, skip):
+            path.write_bytes(b"fake audio data")
+            return True, f"Done: {path.name}"
+
+        dl.download_episode = fake_download
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            async with aiohttp.ClientSession() as session:
+                # Patch session into download_all by mocking ClientSession
+                with patch("casts_down.downloaders.base.aiohttp.ClientSession") as mock_cs:
+                    mock_cs.return_value.__aenter__ = AsyncMock(return_value=session)
+                    mock_cs.return_value.__aexit__ = AsyncMock(return_value=False)
+                    files = await dl.download_all([episode], "Podcast", Path(tmpdir))
+
+        assert len(files) == 1
+        assert "Test Ep" in files[0].name
+
+    @pytest.mark.asyncio
+    async def test_multiple_episodes_all_tracked(self):
+        """download_all correctly tracks indices for multiple concurrent episodes."""
+        from casts_down.downloaders.base import PodcastDownloader, PodcastEpisode
+        import tempfile, aiohttp
+
+        episodes = [
+            PodcastEpisode(title=f"Ep {i}", audio_url=f"https://example.com/ep{i}.mp3")
+            for i in range(5)
+        ]
+        dl = PodcastDownloader(concurrent=3)
+
+        async def fake_download(session, ep, path, skip):
+            path.write_bytes(b"data")
+            return True, f"Done: {path.name}"
+
+        dl.download_episode = fake_download
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("casts_down.downloaders.base.aiohttp.ClientSession") as mock_cs:
+                mock_cs.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+                mock_cs.return_value.__aexit__ = AsyncMock(return_value=False)
+                files = await dl.download_all(episodes, "Podcast", Path(tmpdir))
+
+        assert len(files) == 5
+        titles = {f.stem for f in files}
+        for i in range(5):
+            assert any(f"Ep {i}" in t for t in titles)
+
+    @pytest.mark.asyncio
+    async def test_partial_failure_tracked(self):
+        """download_all returns only successful files when some downloads fail."""
+        from casts_down.downloaders.base import PodcastDownloader, PodcastEpisode
+        import tempfile
+
+        episodes = [
+            PodcastEpisode(title="Good", audio_url="https://example.com/good.mp3"),
+            PodcastEpisode(title="Bad", audio_url="https://example.com/bad.mp3"),
+        ]
+        dl = PodcastDownloader(concurrent=2)
+
+        async def fake_download(session, ep, path, skip):
+            if "Bad" in ep.title:
+                return False, f"Failed: {ep.title}"
+            path.write_bytes(b"data")
+            return True, f"Done: {path.name}"
+
+        dl.download_episode = fake_download
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("casts_down.downloaders.base.aiohttp.ClientSession") as mock_cs:
+                mock_cs.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+                mock_cs.return_value.__aexit__ = AsyncMock(return_value=False)
+                files = await dl.download_all(episodes, "Podcast", Path(tmpdir))
+
+        assert len(files) == 1
+        assert "Good" in files[0].name
 
 
 class TestImports:
