@@ -249,7 +249,7 @@ class TestDownloadAll:
                     files = await dl.download_all([episode], "Podcast", Path(tmpdir))
 
         assert len(files) == 1
-        assert "Test Ep" in files[0].name
+        assert "Test_Ep" in files[0].name
 
     @pytest.mark.asyncio
     async def test_multiple_episodes_all_tracked(self):
@@ -278,7 +278,7 @@ class TestDownloadAll:
         assert len(files) == 5
         titles = {f.stem for f in files}
         for i in range(5):
-            assert any(f"Ep {i}" in t for t in titles)
+            assert any(f"Ep_{i}" in t for t in titles)
 
     @pytest.mark.asyncio
     async def test_partial_failure_tracked(self):

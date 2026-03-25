@@ -55,8 +55,12 @@ def transcribe_batch(
             segments = engine.transcribe(audio_path, language=language)
             write_outputs(audio_path, segments)
             elapsed = time.monotonic() - start_time
+            srt_path = audio_path.with_suffix(".srt").resolve()
+            txt_path = audio_path.with_suffix(".txt").resolve()
             results.append({"file": audio_path, "success": True, "skipped": False, "duration": elapsed, "error": None})
             click.echo(f"[+] {audio_path.name} -> .srt + .txt ({elapsed:.0f}s)")
+            click.echo(f"    {srt_path}")
+            click.echo(f"    {txt_path}")
         except KeyboardInterrupt:
             for suffix in (".srt.tmp", ".txt.tmp"):
                 tmp = audio_path.with_suffix(suffix)
@@ -77,13 +81,18 @@ def print_report(results: list[dict]) -> None:
         return
     click.echo("\n=== Transcription Report ===")
     for r in results:
-        name = r["file"].name
+        audio_path = r["file"]
+        name = audio_path.name
         if r["skipped"]:
             click.echo(f"[~] {name} -> skipped")
         elif r["success"]:
             mins = int(r["duration"] // 60)
             secs = int(r["duration"] % 60)
+            srt_path = audio_path.with_suffix(".srt").resolve()
+            txt_path = audio_path.with_suffix(".txt").resolve()
             click.echo(f"[+] {name} -> .srt + .txt ({mins}m{secs:02d}s)")
+            click.echo(f"    {srt_path}")
+            click.echo(f"    {txt_path}")
         else:
             click.echo(f"[-] {name} -> FAILED: {r['error']}")
     succeeded = sum(1 for r in results if r["success"])

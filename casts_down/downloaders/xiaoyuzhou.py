@@ -179,7 +179,7 @@ class XiaoyuzhouDownloader:
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # 清理文件名
-            safe_title = re.sub(r'[<>:"/\\|?*]', '', episode_info['title'])
+            safe_title = re.sub(r'[<>:"/\\|?*]', '', episode_info['title']).replace(' ', '_')
             filename = f"{safe_title}.m4a"
             output_path = output_dir / filename
 
@@ -236,9 +236,9 @@ class XiaoyuzhouDownloader:
 
             futs = []
             for i, episode in enumerate(episodes):
-                safe_title = re.sub(r'[<>:"/\\|?*]', '', episode['title'])
-                safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name)
-                filename = f"{safe_podcast} - {safe_title}.m4a"
+                safe_title = re.sub(r'[<>:"/\\|?*]', '', episode['title']).replace(' ', '_')
+                safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name).replace(' ', '_')
+                filename = f"{safe_podcast}_-_{safe_title}.m4a"
                 output_path = output_dir / filename
                 path_map[i] = output_path
                 futs.append(asyncio.ensure_future(
