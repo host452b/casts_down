@@ -18,13 +18,13 @@ A cross-platform CLI tool for downloading and transcribing podcasts. Supports Ap
 >
 > By using this software, you agree to: use for personal learning and research only; respect copyright laws and intellectual property; support content creators through official channels; comply with platform terms of service.
 >
-> **Prohibited:** commercial redistribution, mass downloading for public sharing, bypassing paid subscriptions, any activity that harms content creators or platforms. The developers assume no liability for misuse.
+> **Prohibited:** commercial redistribution, mass downloading for public sharing, bypassing paid subscriptions, any activity that harms content creators or platforms. The developers fully support and uphold the rights of content creators and platforms.
 
 > **本工具仅供学习和个人使用。**
 >
 > 使用本软件即表示您同意：仅用于个人学习和研究；尊重版权法律和知识产权；通过官方渠道支持内容创作者；遵守平台服务条款。
 >
-> **禁止：** 商业性再分发、大规模下载用于公开传播、绕过付费订阅服务、任何损害创作者或平台的行为。开发者不承担任何滥用责任。
+> **禁止：** 商业性再分发、大规模下载用于公开传播、绕过付费订阅服务、任何损害创作者或平台的行为。开发者拥护并尊重内容创作者和平台的所有权利。
 
 ---
 
