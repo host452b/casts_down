@@ -1,220 +1,139 @@
 #!/usr/bin/env python3
 """
-跨平台打包脚本
-支持 Windows、macOS、Linux 平台打包
+Cross-platform build script for casts_down.
+
+Two build modes:
+  --mode zipapp  (default) Fast build using Python zipapp. Requires Python on target.
+  --mode pip     Package as wheel for pip distribution.
 """
 
-import os
 import platform
 import shutil
 import subprocess
 import sys
+import tempfile
+import zipapp
 from pathlib import Path
 
 import click
 
 
 def get_platform_info():
-    """获取当前平台信息"""
     system = platform.system().lower()
     machine = platform.machine().lower()
-
-    platform_map = {
-        'darwin': 'macos',
-        'linux': 'linux',
-        'windows': 'windows'
-    }
-
-    arch_map = {
-        'x86_64': 'x64',
-        'amd64': 'x64',
-        'arm64': 'arm64',
-        'aarch64': 'arm64',
-    }
-
-    os_name = platform_map.get(system, system)
-    arch = arch_map.get(machine, machine)
-
-    return os_name, arch
-
-
-def install_pyinstaller():
-    """安装 PyInstaller"""
-    click.echo("📦 检查 PyInstaller...")
-    try:
-        import PyInstaller
-        click.echo(f"✓ PyInstaller 已安装 (版本 {PyInstaller.__version__})")
-    except ImportError:
-        click.echo("⚠️  PyInstaller 未安装，正在安装...")
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyinstaller'])
-        click.echo("✓ PyInstaller 安装完成")
+    platform_map = {'darwin': 'macos', 'linux': 'linux', 'windows': 'windows'}
+    arch_map = {'x86_64': 'x64', 'amd64': 'x64', 'arm64': 'arm64', 'aarch64': 'arm64'}
+    return platform_map.get(system, system), arch_map.get(machine, machine)
 
 
 def clean_build():
-    """清理构建目录"""
-    click.echo("🧹 清理旧的构建文件...")
-
-    dirs_to_clean = ['build', 'dist']
-    for dir_name in dirs_to_clean:
-        dir_path = Path(dir_name)
-        if dir_path.exists():
-            shutil.rmtree(dir_path)
-            click.echo(f"  ✓ 删除 {dir_name}/")
-
-    click.echo("✓ 清理完成\n")
+    """Clean build artifacts."""
+    for d in ['build', 'dist', 'release']:
+        p = Path(d)
+        if p.exists():
+            shutil.rmtree(p)
+            click.echo(f"  Removed {d}/")
 
 
-def build_executable():
-    """使用 PyInstaller 构建可执行文件"""
-    click.echo("🔨 开始构建可执行文件...\n")
-
-    # Only bundle what casts_down actually needs.
-    # Exclude heavy ML/scientific packages that PyInstaller picks up
-    # from the environment but are NOT used by the download CLI.
-    # (Transcription engines are optional and installed separately.)
-    exclude_modules = [
-        'torch', 'torchvision', 'torchaudio', 'torchao',
-        'tensorflow', 'keras',
-        'numpy', 'scipy', 'pandas', 'sklearn', 'scikit-learn',
-        'matplotlib', 'PIL', 'cv2', 'opencv',
-        'h5py', 'numba', 'llvmlite',
-        'librosa', 'soundfile',
-        'datasets', 'pyarrow',
-        'apex', 'transformers', 'tokenizers',
-        'faster_whisper', 'mlx_whisper', 'mlx', 'ctranslate2',
-        'Cryptodome', 'cryptography',
-        'IPython', 'jupyter', 'notebook',
-        'pytest', 'setuptools', 'pip',
-    ]
-
-    cmd = [
-        'pyinstaller',
-        '--clean',
-        '--onefile',
-        '--name', 'casts-down',
-        '--hidden-import', 'casts_down',
-        '--hidden-import', 'casts_down.cli',
-        '--hidden-import', 'casts_down.downloaders.base',
-        '--hidden-import', 'casts_down.downloaders.podcast',
-        '--hidden-import', 'casts_down.downloaders.xiaoyuzhou',
-    ]
-
-    for mod in exclude_modules:
-        cmd.extend(['--exclude-module', mod])
-
-    cmd.append('casts_down/cli.py')
-
-    click.echo(f"执行命令: {' '.join(cmd)}\n")
-
-    result = subprocess.run(cmd, check=False)
-
-    if result.returncode != 0:
-        click.echo("\n❌ 构建失败", err=True)
-        sys.exit(1)
-
-    click.echo("\n✓ 构建完成")
-
-
-def create_release_package():
-    """创建发布包"""
+def build_zipapp():
+    """
+    Build a .pyz executable using zipapp (stdlib, no extra deps).
+    Bundles only casts_down/ package. Dependencies must be installed on target.
+    """
     os_name, arch = get_platform_info()
+    output_name = f"casts-down-{os_name}-{arch}.pyz"
 
-    click.echo(f"\n📦 创建发布包 ({os_name}-{arch})...\n")
-
-    # 检查构建产物
-    dist_dir = Path('dist')
-    if not dist_dir.exists():
-        click.echo("❌ dist/ 目录不存在", err=True)
-        sys.exit(1)
-
-    # 查找可执行文件
-    executable_name = 'casts-down'
-    if os_name == 'windows':
-        executable_name += '.exe'
-
-    executable_path = dist_dir / executable_name
-
-    if not executable_path.exists():
-        click.echo(f"❌ 找不到可执行文件: {executable_path}", err=True)
-        sys.exit(1)
-
-    # 创建 release 目录
     release_dir = Path('release')
     release_dir.mkdir(exist_ok=True)
+    output_path = release_dir / output_name
 
-    # 复制可执行文件到 release 目录，带平台标识
-    release_name = f'casts-down-{os_name}-{arch}'
-    if os_name == 'windows':
-        release_name += '.exe'
+    click.echo(f"[*] Building {output_name}...")
 
-    release_path = release_dir / release_name
-    shutil.copy2(executable_path, release_path)
+    # Create a temp staging directory
+    with tempfile.TemporaryDirectory() as tmpdir:
+        staging = Path(tmpdir)
 
-    # 显示文件信息
-    file_size = release_path.stat().st_size / (1024 * 1024)  # MB
+        # Copy the package
+        shutil.copytree('casts_down', staging / 'casts_down')
 
-    click.echo(f"✓ 可执行文件: {release_path}")
-    click.echo(f"  大小: {file_size:.2f} MB")
-    click.echo(f"  平台: {os_name}-{arch}")
+        # Create __main__.py entry point
+        main_py = staging / '__main__.py'
+        main_py.write_text(
+            "from casts_down.cli import main\n"
+            "main()\n"
+        )
 
-    return release_path
+        # Build the zipapp
+        # Use the exact Python that's running this build script
+        python_path = sys.executable
+        zipapp.create_archive(
+            staging,
+            target=output_path,
+            interpreter=python_path,
+            compressed=True,
+        )
+
+    output_path.chmod(0o755)
+    size_kb = output_path.stat().st_size / 1024
+    click.echo(f"[+] Built: {output_path} ({size_kb:.0f} KB)")
+    return output_path
+
+
+def build_wheel():
+    """Build a wheel for pip distribution."""
+    click.echo("[*] Building wheel...")
+    result = subprocess.run(
+        [sys.executable, '-m', 'build', '--wheel'],
+        check=False,
+    )
+    if result.returncode != 0:
+        click.echo("[!] Wheel build failed. Install build: pip install build", err=True)
+        sys.exit(1)
+
+    wheels = list(Path('dist').glob('*.whl'))
+    if wheels:
+        click.echo(f"[+] Built: {wheels[0]} ({wheels[0].stat().st_size / 1024:.0f} KB)")
+    return wheels[0] if wheels else None
 
 
 @click.command()
-@click.option('--clean', is_flag=True, help='仅清理构建目录')
-@click.option('--no-clean', is_flag=True, help='构建前不清理')
-def main(clean, no_clean):
+@click.option('--clean', is_flag=True, help='Clean build artifacts only')
+@click.option('--mode', type=click.Choice(['zipapp', 'pip']), default='zipapp',
+              help='Build mode (default: zipapp)')
+def main(clean, mode):
     """
-    Casts Down 打包工具
+    Casts Down build tool.
 
     \b
-    打包当前平台的可执行文件:
-      python build.py
+    Build single-file executable (fast, ~seconds):
+      python build_exe.py
 
     \b
-    仅清理构建目录:
-      python build.py --clean
+    Build wheel for pip:
+      python build_exe.py --mode pip
+
+    \b
+    Clean:
+      python build_exe.py --clean
     """
-
-    click.echo("=" * 60)
-    click.echo("  Casts Down - 跨平台打包工具")
-    click.echo("=" * 60)
-    click.echo()
-
     os_name, arch = get_platform_info()
-    click.echo(f"📋 当前平台: {os_name}-{arch}")
-    click.echo(f"🐍 Python 版本: {sys.version.split()[0]}")
-    click.echo()
+    click.echo(f"Casts Down Build ({os_name}-{arch}, Python {sys.version.split()[0]})\n")
 
-    # 仅清理模式
     if clean:
         clean_build()
-        click.echo("✓ 完成")
+        click.echo("[+] Clean complete")
         return
 
-    # 安装 PyInstaller
-    install_pyinstaller()
+    clean_build()
 
-    # 清理旧文件
-    if not no_clean:
-        clean_build()
-
-    # 构建可执行文件
-    build_executable()
-
-    # 创建发布包
-    release_path = create_release_package()
-
-    click.echo()
-    click.echo("=" * 60)
-    click.echo("✨ 打包完成！")
-    click.echo("=" * 60)
-    click.echo()
-    click.echo(f"📦 发布文件: {release_path}")
-    click.echo()
-    click.echo("使用方法:")
-    click.echo(f"  ./{release_path.name} <URL>")
-    click.echo()
+    if mode == 'zipapp':
+        output = build_zipapp()
+        click.echo(f"\nUsage:\n  ./{output} <URL>\n  ./{output} --help")
+        click.echo("\nNote: Requires Python 3.10+ and dependencies installed on target.")
+    else:
+        output = build_wheel()
+        if output:
+            click.echo(f"\nInstall:\n  pip install {output}")
 
 
 if __name__ == '__main__':
