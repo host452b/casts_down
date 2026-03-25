@@ -419,11 +419,12 @@ class TestDryRunCliPipeline:
         """--version prints version string."""
         from click.testing import CliRunner
         from casts_down.cli import main
+        from casts_down import __version__
 
         runner = CliRunner()
         result = runner.invoke(main, ['--version'])
         assert result.exit_code == 0
-        assert '2.1.7' in result.output
+        assert __version__ in result.output
 
     def test_download_podcast_dryrun_with_mock(self):
         """Full pipeline: Apple URL → iTunes API → RSS → episode list, mock actual download."""
@@ -442,6 +443,46 @@ class TestDryRunCliPipeline:
                 ])
                 # Should reach the download phase (RSS extraction succeeded)
                 assert 'RSS URL' in result.output or 'Preparing to download' in result.output
+
+
+class TestDryRunDepCheck:
+    """Dependency check integration — verify warning appears in full CLI flow."""
+
+    def test_missing_ffmpeg_warning_in_download_flow(self):
+        """Full CLI invocation shows yellow ffmpeg warning when missing."""
+        import tempfile
+        from click.testing import CliRunner
+        from casts_down.cli import main
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("casts_down.cli.shutil.which", return_value=None), \
+                 patch("casts_down.cli.platform.system", return_value="Darwin"), \
+                 patch("casts_down.downloaders.base.PodcastDownloader.download_episode") as mock_dl:
+                mock_dl.return_value = (False, "dry-run: skipped")
+                runner = CliRunner()
+                result = runner.invoke(main, [
+                    '--no-transcribe', '--latest', '1', '--output', tmpdir,
+                    'https://podcasts.apple.com/us/podcast/lex-fridman-podcast/id1434243584',
+                ])
+                assert 'ffmpeg' in result.output
+                assert 'brew install ffmpeg' in result.output
+
+    def test_no_warning_when_ffmpeg_installed(self):
+        """No warning when ffmpeg is available."""
+        import tempfile
+        from click.testing import CliRunner
+        from casts_down.cli import main
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("casts_down.cli.shutil.which", return_value="/opt/homebrew/bin/ffmpeg"), \
+                 patch("casts_down.downloaders.base.PodcastDownloader.download_episode") as mock_dl:
+                mock_dl.return_value = (False, "dry-run: skipped")
+                runner = CliRunner()
+                result = runner.invoke(main, [
+                    '--no-transcribe', '--latest', '1', '--output', tmpdir,
+                    'https://podcasts.apple.com/us/podcast/lex-fridman-podcast/id1434243584',
+                ])
+                assert 'ffmpeg' not in result.output
 
 
 class TestDryRunXiaoyuzhouParser:

@@ -6,6 +6,8 @@ and subcommands for transcription.
 """
 
 import asyncio
+import platform
+import shutil
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -17,6 +19,33 @@ from casts_down import __version__
 from casts_down.downloaders.base import PodcastDownloader
 from casts_down.downloaders.podcast import ApplePodcastsParser, RSSParser
 from casts_down.downloaders.xiaoyuzhou import XiaoyuzhouDownloader
+
+
+# ---------------------------------------------------------------------------
+# Dependency check
+# ---------------------------------------------------------------------------
+
+def check_system_deps() -> None:
+    """Check for required system-level tools and warn if missing."""
+    missing: list[tuple[str, str]] = []
+
+    if not shutil.which("ffmpeg"):
+        system = platform.system()
+        if system == "Darwin":
+            hint = "brew install ffmpeg"
+        elif shutil.which("apt"):
+            hint = "sudo apt install ffmpeg"
+        elif shutil.which("dnf"):
+            hint = "sudo dnf install ffmpeg"
+        else:
+            hint = "请参考 https://ffmpeg.org/download.html 安装"
+        missing.append(("ffmpeg", hint))
+
+    for tool, hint in missing:
+        click.echo(click.style(
+            f"[!] {tool} 未安装，转录功能将不可用。运行 {hint} 安装",
+            fg="yellow",
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +335,8 @@ def main(ctx, url, download_all, latest, output, concurrent, skip_existing, tran
     try:
         banner = f"\nCasts Down - Intelligent Podcast Downloader v{__version__}\n"
         click.echo(banner)
+
+        check_system_deps()
 
         disclaimer = (
             "DISCLAIMER: For educational purposes only. Respect copyrights.\n"
