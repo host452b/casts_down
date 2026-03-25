@@ -228,30 +228,28 @@ class XiaoyuzhouDownloader:
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # 批量下载
-            tasks = []
             path_map: dict[int, Path] = {}
+
+            async def _indexed(idx: int, audio_url: str, path: Path):
+                result = await self.download_audio(session, audio_url, path, skip_existing)
+                return idx, result
+
+            futs = []
             for i, episode in enumerate(episodes):
                 safe_title = re.sub(r'[<>:"/\\|?*]', '', episode['title'])
                 safe_podcast = re.sub(r'[<>:"/\\|?*]', '', podcast_name)
                 filename = f"{safe_podcast} - {safe_title}.m4a"
                 output_path = output_dir / filename
                 path_map[i] = output_path
-
-                task = self.download_audio(
-                    session,
-                    episode['enclosure']['url'],
-                    output_path,
-                    skip_existing
-                )
-                tasks.append((i, task))
+                futs.append(asyncio.ensure_future(
+                    _indexed(i, episode['enclosure']['url'], output_path)
+                ))
 
             # 显示进度
             results = []
-            with tqdm(total=len(tasks), desc="Download Progress", unit="ep") as pbar:
-                coros = {asyncio.ensure_future(t): idx for idx, t in tasks}
-                for future in asyncio.as_completed(list(coros.keys())):
-                    result = await future
-                    idx = coros[future]
+            with tqdm(total=len(futs), desc="Download Progress", unit="ep") as pbar:
+                for coro in asyncio.as_completed(futs):
+                    idx, result = await coro
                     results.append((idx, result))
                     pbar.update(1)
 
