@@ -34,8 +34,8 @@ def format_txt(segments: list[Segment]) -> str:
 def write_outputs(audio_path: Path, segments: list[Segment]) -> tuple[Path, Path]:
     srt_path = audio_path.with_suffix(".srt")
     txt_path = audio_path.with_suffix(".txt")
-    srt_tmp = srt_path.with_suffix(".srt.tmp")
-    txt_tmp = txt_path.with_suffix(".txt.tmp")
+    srt_tmp = srt_path.parent / (srt_path.name + ".tmp")
+    txt_tmp = txt_path.parent / (txt_path.name + ".tmp")
     try:
         srt_tmp.write_text(format_srt(segments), encoding="utf-8")
         txt_tmp.write_text(format_txt(segments), encoding="utf-8")

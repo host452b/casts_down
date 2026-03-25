@@ -1,4 +1,5 @@
 """Tests for transcription output formatting."""
+from pathlib import Path
 from casts_down.transcribe.engine import Segment
 from casts_down.transcribe.formatter import format_srt, format_txt, write_outputs
 
@@ -79,3 +80,19 @@ class TestWriteOutputs:
         audio_path.touch()
         write_outputs(audio_path, sample_segments)
         assert list(tmp_path.glob("*.tmp")) == []
+
+    def test_tmp_files_use_safe_naming(self):
+        """Temp file naming works on Python 3.10 (no compound suffix)."""
+        import tempfile
+        from casts_down.transcribe.engine import Segment
+        from casts_down.transcribe.formatter import write_outputs
+
+        segments = [Segment(start=0.0, end=1.0, text="Test")]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_path = Path(tmpdir) / "test.mp3"
+            audio_path.write_bytes(b"fake")
+            srt, txt = write_outputs(audio_path, segments)
+            assert srt.exists()
+            assert txt.exists()
+            assert srt.suffix == ".srt"
+            assert txt.suffix == ".txt"
